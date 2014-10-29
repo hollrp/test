@@ -1,0 +1,148 @@
+<HTML>
+		<HEAD>
+				<TITLE>Dynamically populating drop down, combobox, list box using JavaScript</TITLE>
+				<script type="text/javascript">
+				var ready = false;
+				function addCombo() {
+						var textb = document.getElementById("txtCombo");
+						var combo = document.getElementById("combo");
+
+						var option = document.createElement("option");
+						option.text = textb.value;
+						option.value = textb.value;
+						try {
+								combo.add(option, null); //Standard
+						}catch(error) {
+								combo.add(option); // IE only
+						}
+						textb.value = "";
+				}
+				function countries(){
+					var combo = document.getElementById("countryBox");
+
+
+					var bel = document.createElement("option");
+					bel.text = "Belarus";
+					bel.value = "Belarus";
+					combo.add(bel);
+					var ru = document.createElement("option");
+					ru.text = "Russia";
+					ru.value = "Russia";
+					combo.add(ru);
+					cityBoxDisabled(true);
+					streetBoxDisabled(true);
+
+
+				}
+				function cities(){
+
+					var city;
+					var combo = document.getElementById("cityBox");
+					var countryName = document.getElementById("countryBox").value;
+					if(countryName == "default"){
+						cityBoxDisabled(true);
+						streetBoxDisabled(true);
+						return;
+					}
+				cityBoxDisabled(false);
+
+					if(countryName == "Russia"){
+				combo.innerHTML='';
+
+				city = document.createElement("option");
+				city.text="Please, choose your city";
+				city.value="default";
+				combo.add(city);
+						city = document.createElement("option");
+						city.text="Moscow";
+						city.value="Moscow";
+						combo.add(city);
+						city = document.createElement("option");
+						city.text="Kaliningrad";
+						city.value="Kaliningrad";
+						combo.add(city);
+						city = document.createElement("option");
+						city.text="Volgograd";
+						city.value="Volgograd";
+						combo.add(city);
+						city = document.createElement("option");
+						city.text="Leningrad";
+						city.value="Leningrad";
+						combo.add(city);
+					}
+					if(countryName == "Belarus"){
+					combo.innerHTML='';
+					city = document.createElement("option");
+					city.text="Please, choose your city";
+					city.value="default";
+					combo.add(city);
+						city = document.createElement("option");
+					city.text="Minsk";
+					city.value="Minsk";
+					combo.add(city);
+					city = document.createElement("option");
+					city.text="Homel";
+					city.value="Homel";
+					combo.add(city);
+					city = document.createElement("option");
+					city.text="Mahileu";
+					city.value="Mahileu";
+					combo.add(city);
+					city = document.createElement("option");
+					city.text="Hrodna";
+					city.value="Hrodna";
+					combo.add(city);
+					}
+				}
+				function streets(){
+					var street;
+					var cityName = document.getElementById("cityBox").value;
+					var combo = document.getElementById("streetBox");
+					if(cityName == "default"){
+				streetBoxDisabled(true);
+						return;
+					}
+				streetBoxDisabled(false);
+				combo.innerHTML='';
+
+				street = document.createElement("option");
+				street.text="Please, choose your street";
+				street.value="default";
+				combo.add(street);
+					for(i = 1;i<=10;i++){
+						street = document.createElement("option");
+						street.text=cityName+"_street_"+i;
+						street.value=cityName+"_street_"+i;
+						combo.add(street);
+					}
+				}
+				function cityBoxDisabled(booleanValue){
+					document.getElementById("cityBox").disabled = booleanValue;
+					document.getElementById("cityBoxButton").disabled = booleanValue;
+				}
+				function streetBoxDisabled(booleanValue){
+					document.getElementById("streetBox").disabled = booleanValue;
+				}		
+
+				</script>
+		</HEAD>
+		<BODY style="font-family: sans-serif" onload="countries()">
+
+				<fieldset>
+						<legend>Combo box</legend>
+
+						Country: <select name="combo" id="countryBox">
+							 <option value="default">Please, choose your country</option>
+							<input type="button" value="select" onclick="cities()"></input>
+
+						</select>
+						<br/>
+						City: <select name="combo" id="cityBox" onselect="streets()">
+						<input type="button" value="select" id="cityBoxButton" onclick="streets()"></input>
+						</select>
+						<br/>
+						Street:<select name="combo" id="streetBox">
+						</select>
+				</fieldset>
+		</BODY>
+</HTML>

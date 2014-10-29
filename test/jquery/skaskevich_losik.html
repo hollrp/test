@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+  select { width: 200px; }
+  </style>
+<script src="http://code.jquery.com/jquery-1.8.3.js"></script>
+</head>
+<body onload="loadCountries()">
+
+<select name="countries" id="countries">
+<input type="button"  value="add" onclick="loadCities()"/>
+<br/>
+<select name="cities" id="cities">
+<input type="button" id="citiesButton" value="add" onclick="loadStreets()"/>
+<br/>
+<select name="streets" id="streets">
+
+
+
+</select>
+
+<script>
+function loadCountries(){
+  $('#countries').append( $('<option value="default">Please, choose country</option>') );
+$('#countries').append( $('<option value="Belarus">Belarus</option>') );
+$('#countries').append( $('<option value="Russia">Russia</option>') );
+citiesDisabled(true);
+streetsDisabled(true);
+
+}
+
+function loadCities(){
+  if($('#countries option:selected').val()=="default"){
+      citiesDisabled(true);
+      streetsDisabled(true);
+      return;
+  }
+  citiesDisabled(false);
+  if($('#countries option:selected').val()=="Belarus"){
+    $('#cities').empty();
+    $('#cities').append( $('<option value="default">Please, choose city</option>') );
+    $('#cities').append( $('<option value="Minsk">Minsk</option>') );
+    $('#cities').append( $('<option value="Homel">Homel</option>') );
+    $('#cities').append( $('<option value="Mahileu">Mahileu</option>') );
+    $('#cities').append( $('<option value="Hrodna">Hrodna</option>') );
+    $('#cities').append( $('<option value="Vitsebsk">Vitsebsk</option>') );
+    $('#cities').append( $('<option value="Pinsk">Pinsk</option>') );
+  }
+  if($('#countries option:selected').val()=="Russia"){
+    $('#cities').empty();
+    $('#cities').append( $('<option value="default">Please, choose city</option>') );
+    $('#cities').append( $('<option value="Moscow">Moscow</option>') );
+    $('#cities').append( $('<option value="Irkutsk">Irkutsk</option>') );
+  }
+}
+function loadStreets(){
+if($('#cities option:selected').val()=="default"){
+      streetsDisabled(true);
+      return;
+  }
+  streetsDisabled(false);
+
+
+  $('#streets').empty();
+  $('#streets').append( $('<option value="default">Please, choose street</option>') );
+  for(i = 1;i<=10;i++){
+    var street = $('#cities option:selected').val() + ' street '+i;
+    $('#streets').append( $('<option value="'+street+'">'+street+'</option>') );
+  }
+}
+
+function citiesDisabled(booleanValue){
+  if(booleanValue){
+    $('#cities').attr('disabled', 'disabled');
+    $('#citiesButton').attr('disabled', 'disabled');
+    return;
+  }
+  $('#cities').attr('disabled', false);
+  $('#citiesButton').attr('disabled',false);
+}
+function streetsDisabled(booleanValue){
+  if(booleanValue){
+    $('#streets').attr('disabled', 'disabled');
+    return;
+  }
+  $('#streets').attr('disabled', false);
+}
+</script>
+
+</body>
+</html>
