@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.expedia.evc.persistence.dao.ICardTypesDao">
+
+    <!--query to get card type mapped to issuers from db with active card issuers-->
+
+  <select id="getCardTypes" resultType="CardTypesDO">
+  SELECT DISTINCT cbt.CardTypeID, mg.CardIssuerID, CardIssuerName,CardTypeName
+  FROM dbo.CardIssuer ci with(NOLOCK)
+  inner join MCCGroup mg with(NOLOCK) on ci.CardIssuerID = mg.CardIssuerID
+  inner join CardBucketType cbt with(NOLOCK) on mg.MCCGroupID = cbt.MCCGroupID
+  inner join CardType ct with(NOLOCK) on ct.CardTypeID = cbt.CardTypeID
+  where ci.ActiveBool != 0
+  </select>
+
+  <select id="getCardTypesList" resultType="string">
+  SELECT DISTINCT ci.CardTypeName
+  FROM dbo.CardType ci with(NOLOCK)
+  </select>
+
+  <select id="getCardIssuerList" resultType="string">
+  SELECT DISTINCT ci.CardIssuerName
+  FROM dbo.CardIssuer ci with(NOLOCK)
+  </select>
+
+</mapper>

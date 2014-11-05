@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+         version="3.0">
+
+    <display-name>PaymentEVC</display-name>
+    <description>Payment EVC</description>
+
+	<context-param>
+	    <param-name>log4jConfigLocation</param-name>
+	    <param-value>classpath:log4j.xml</param-value>
+	</context-param>
+	<context-param>
+		<param-name>log4jExposeWebAppRoot</param-name>
+		<param-value>false</param-value>
+	</context-param>
+
+    <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>classpath:com/expedia/evc/applicationContext.xml</param-value>
+    </context-param>
+    
+    <listener>
+	    <listener-class>org.springframework.web.util.Log4jConfigListener</listener-class>
+	</listener>
+    
+	<listener>
+        <listener-class>com.expedia.evc.ws.listener.NotifyingContextLoaderListener</listener-class>
+    </listener>
+    
+    <listener>
+    	<listener-class>org.springframework.web.context.request.RequestContextListener</listener-class>
+    </listener>
+    
+    <servlet>
+        <servlet-name>CXFServlet</servlet-name>
+        <servlet-class>org.apache.cxf.transport.servlet.CXFServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>CXFServlet</servlet-name>
+        <url-pattern>/*</url-pattern>        
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>system-status</servlet-name>
+        <servlet-class>com.expedia.e3.es.payment.common.status.api.servlet.SystemStatusFacadeServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>system-status</servlet-name>
+        <url-pattern>/system-status/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>vipcheck</servlet-name>
+        <servlet-class>com.expedia.gpt.vipcheck.servlet.DefaultVIPCheckServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>vipcheck</servlet-name>
+        <url-pattern>/wants-traffic/*</url-pattern>
+    </servlet-mapping>
+
+	<filter>
+		<filter-name>requestContextFilter</filter-name>
+		<filter-class>org.springframework.web.filter.RequestContextFilter</filter-class>
+	</filter>
+	
+	<filter-mapping>
+        <filter-name>requestContextFilter</filter-name>
+        <url-pattern>/configservice/*</url-pattern>
+    </filter-mapping>
+
+    <filter>
+        <filter-name>com.expedia.evc.webservice.performance.endpoint.cardservice.LoggingFilter</filter-name>
+        <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>com.expedia.evc.webservice.performance.endpoint.cardservice.LoggingFilter</filter-name>
+        <url-pattern>/service</url-pattern>
+    </filter-mapping>
+    
+    <filter>
+        <filter-name>com.expedia.evc.webservice.performance.endpoint.v1.cardservice.LoggingFilter</filter-name>
+        <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>com.expedia.evc.webservice.performance.endpoint.v1.cardservice.LoggingFilter</filter-name>
+        <url-pattern>/service/v1</url-pattern>
+    </filter-mapping>
+      
+    <filter>
+        <filter-name>com.expedia.evc.webservice.performance.endpoint.restservice.LoggingFilter</filter-name>
+        <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>com.expedia.evc.webservice.performance.endpoint.restservice.LoggingFilter</filter-name>
+        <url-pattern>/admin/*</url-pattern>
+        <url-pattern>/configservice/*</url-pattern>
+    </filter-mapping>
+   
+    <filter>
+        <filter-name>filterChainProxy</filter-name>
+        <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>filterChainProxy</filter-name>
+        <url-pattern>/*</url-pattern>
+        <url-pattern>/wants-traffic/*</url-pattern>
+    </filter-mapping>
+
+</web-app>

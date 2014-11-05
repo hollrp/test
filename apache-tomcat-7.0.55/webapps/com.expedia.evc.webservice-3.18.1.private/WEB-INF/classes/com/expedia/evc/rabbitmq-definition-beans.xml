@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+	xsi:schemaLocation="http://www.springframework.org/schema/rabbit
+           http://www.springframework.org/schema/rabbit/spring-rabbit-1.3.xsd
+           http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+           ">
+
+	<rabbit:template id="rabbitTemplate"
+		channel-transacted="true" connection-factory="rabbitConnectionFactory"
+		exchange="${com.expedia.evc.webservice.rabbitmq/exchangeName}">
+	</rabbit:template>
+	<bean id="rabbitConnectionFactory"
+		class="org.springframework.amqp.rabbit.connection.CachingConnectionFactory">
+		<property name="addresses" value="${com.expedia.evc.webservice.rabbitmq/hosts}" />
+		<property name="username"
+			value="${com.expedia.evc.webservice.rabbitmq/username}" />
+		<property name="password"
+			value="${com.expedia.evc.webservice.rabbitmq/password}" />
+		<property name="closeTimeout" value="1000" />
+	</bean>
+</beans>

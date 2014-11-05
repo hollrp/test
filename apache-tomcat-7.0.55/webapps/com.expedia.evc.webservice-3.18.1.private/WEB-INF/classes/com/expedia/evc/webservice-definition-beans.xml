@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright 2012 Expedia, Inc. All rights reserved.
+    EXPEDIA PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
+
+    WS implementation beans.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:cxf="http://cxf.apache.org/core"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+                           http://cxf.apache.org/jaxws http://cxf.apache.org/schemas/jaxws.xsd 
+                           http://cxf.apache.org/core http://cxf.apache.org/schemas/core.xsd">
+
+	<import resource="perflogging-definition-beans.xml" />
+	
+	<!-- PerfLogging wrapper for WebService -->
+	<bean id="EvcWebService"
+			class="org.springframework.aop.framework.ProxyFactoryBean">
+		<property name="proxyInterfaces" value="com.expedia.evc.webservice.cardapi.v3.EvcWebService" />
+		<property name="targetName" value="evcWebServiceTarget" />
+		<property name="interceptorNames">
+			<list>
+				<idref bean="com.expedia.evc.webservice.performance.service.LoggingInterceptor" />
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="evcWebServiceTarget" class="com.expedia.evc.ws.EvcWebServiceImpl" />
+	
+</beans>

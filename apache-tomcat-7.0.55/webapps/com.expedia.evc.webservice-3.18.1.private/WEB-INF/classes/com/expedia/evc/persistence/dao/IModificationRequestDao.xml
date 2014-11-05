@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.expedia.evc.persistence.dao.IModificationRequestDao">
+	
+	<insert id="addModificationRequest" parameterType="ModificationRequestDO">
+	   <selectKey resultType="java.lang.Integer" keyProperty="modificationRequestID"
+  				 order="AFTER">
+  		SELECT @@IDENTITY
+  		</selectKey>
+			INSERT dbo.CreditCardModificationRequest
+	     	( 
+	       CreditCardModificationRequestTypeID,
+	       Status,
+	       CardIssuerAPIErrorID,
+	       RetryCount,
+	       AuditLogID,
+	       BlockingRequestBool,
+	       PriorityRank,
+	       CCAccountNbr,
+	       CCVCode,
+	       CardBucketID,
+	       CardPayeeID,
+	       CreditCardID,
+	       CreditLimitAmt,
+	       ExpirationDate,
+	       ValidDateStart,
+	       ValidDateEnd,
+	       BookingCurrencyID,
+	       BookingCurrencyExchangeRate,
+	       CreditCardAttributes,
+	       RequestAttributes,
+	       CreatedBy,
+	       CreatedDate,
+	       LastUpdatedBy,
+	       LastUpdatedDate,
+	       QueueTypeID
+		 )
+		VALUES(
+	       #{creditCardModificationRequestTypeID},
+	       #{status}, 
+	       NULL,
+	       0,
+	       NULL,
+	       #{blockingRequestBool},
+	       #{priorityRank},
+	       CONVERT(varbinary(MAX), #{ccAccountNbr}),
+	       CONVERT(varbinary(MAX), #{ccvCode}),
+	       #{cardBucketID},
+	       #{cardPayeeID},
+	       #{creditCardID},
+	       #{creditLimitAmt},
+	       #{expirationDate},
+	       #{validDateStart},
+	       #{validDateEnd},
+	       NULL,
+	       #{bookingCurrencyExchangeRate},
+	       #{creditCardAttributes},
+	       #{requestAttributes},
+	       CONVERT(VARCHAR(32), #{createdBy}),
+	       CURRENT_TIMESTAMP,
+	       CONVERT(VARCHAR(32), #{lastUpdatedBy}),
+	       CURRENT_TIMESTAMP,
+	       #{queueTypeID}
+	       )			
+	</insert>
+	<resultMap type="com.expedia.evc.util.ListWrapper" id="modificationRequestList" autoMapping="true">
+		<result column="totalCount" property="totalCount"/>
+		<collection property="list" resultMap="modificationRequest" notNullColumn="modificationRequestId"/>
+	</resultMap>
+	
+	<resultMap type="com.expedia.evc.persistence.domain.ModificationRequestDO" id="modificationRequest" autoMapping="true"/>
+	
+	<select id="getModificationRequests"  resultMap="modificationRequestList">
+	  ;WITH Page AS
+	  (
+	  SELECT
+		ccmrd.CreditCardModificationRequestID as 'modificationRequestID',
+		ccmrd.CreditCardModificationRequestTypeID as 'creditCardModificationRequestTypeID',
+		ccmrd.CreditCardModificationRequestTypeName,
+		ccmrd.Status as 'status',
+		ccmrd.StatusDesc as 'statusDescription',
+		ccmrd.PriorityRank as 'priorityRank',
+		ccmrd.CreditCardID as 'creditCardID',
+		ccmrd.CreditLimitAmt as 'creditLimitAmt',
+	 	scb.CurrencyCode as 'bucketCurrencyCode',
+		ccmrd.ExpirationDate as 'expirationDate',
+		ccmrd.ValidDateStart as 'validDateStart',
+		ccmrd.ValidDateEnd as 'validDateEnd',
+		ccmrd.CreditCardAttributes as 'creditCardAttributes',
+		ccmrd.RequestAttributes as 'requestAttributes',
+		ccmrd.CreatedBy as 'createdBy',
+	    ccmrd.CreatedDate as 'createdDate',
+	  ROW_NUMBER()  OVER(ORDER BY ccmrd.CreditCardModificationRequestID DESC) AS RowID 
+	  FROM CreditCardModificationRequestDetailed ccmrd WITH(NOLOCK)
+		INNER JOIN dbo.CardBucketDetailed scb 
+	            on scb.CardBucketID=ccmrd.CardBucketID
+	 WHERE ccmrd.CreditCardId = #{cardId}
+		)
+		SELECT * ,(select MAX(RowID) from Page) as totalCount 
+		FROM Page
+		where page.RowID BETWEEN #{offset}+1 AND #{offset}+#{length}
+		union all
+    	select null,null,null,null,null,null,null,null,null,null,null,null, null,null,null,null,null, COALESCE((select MAX(RowID) from Page), 0) 
+    	where (
+    		select COUNT(*) from Page
+    		where page.RowID BETWEEN #{offset}+1 AND #{offset}+#{length}) = 0 ORDER BY page.RowID
+	</select>
+</mapper>

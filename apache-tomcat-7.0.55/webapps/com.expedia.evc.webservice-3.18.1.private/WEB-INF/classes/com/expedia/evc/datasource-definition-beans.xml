@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+	
+	<bean id="succAbstractDataSource" class="org.apache.commons.dbcp.BasicDataSource"
+		abstract="true" destroy-method="close"
+		p:driverClassName="${com.expedia.evc.database/jdbcDriver}"
+		p:username="${com.expedia.evc.database/user}"
+		p:password="${com.expedia.evc.database/password}"
+		p:initialSize="${com.expedia.evc.database/initialSize}"
+		p:maxActive="${com.expedia.evc.database/maxActive}"
+		p:maxWait="${com.expedia.evc.database/maxWait}"
+		p:validationQuery="select 1"
+		p:validationQueryTimeout="${com.expedia.evc.database/validationQueryTimeout:10000}"/>
+	
+	<bean id="succRepositoryDataSource" parent="succAbstractDataSource"
+		p:url="${com.expedia.evc.database/url};${com.expedia.evc.database/timeout}" />
+	
+	<bean id="succRepositoryDataSourceAddModificationRequest" parent="succAbstractDataSource"
+		p:url="${com.expedia.evc.database/url};${com.expedia.evc.database/timeoutAddModificationRequest}"/>
+	
+	<bean id="succRepositoryDataSourceFxJob" parent="succAbstractDataSource"
+		p:url="${com.expedia.evc.database/url};${com.expedia.evc.database/timeoutFxJob}"/>
+	
+	
+	<bean id="succRepositoryDataSourceCardSearch" parent="succAbstractDataSource"
+		p:url="${com.expedia.evc.database/url};${com.expedia.evc.database/timeoutCardSearch};sendStringParametersAsUnicode=false"/>
+	
+	<bean id="succRepositoryDataSourceCardBucketBalance" parent="succAbstractDataSource"
+		p:url="${com.expedia.evc.database/url};${com.expedia.evc.database/timeoutBucketBalance}"/>
+	
+</beans>

@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<!--
+    Copyright 2012 Expedia, Inc. All rights reserved.
+    EXPEDIA PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
+-->
+
+<log4j:configuration debug="true" xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+	<!-- DEV Configuration -->
+    <appender name="file" class="com.expedia.e3.es.payment.common.performance.writer.log4j.FormattingAsyncAppender">
+        <param name="BufferSize" value="10000"/>
+        <param name="Blocking" value="false"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d %-5p %t %c - %m"/>
+        </layout>
+        <appender-ref ref="fileAppender"/>
+    </appender>
+    <appender name="fileAppender" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${catalina.base}/logs/evc.log"/>
+        <param name="Append" value="true" />
+        <param name="MaxFileSize" value="25600KB" />
+        <param name="MaxBackupIndex" value="100" />
+        <param name="Encoding" value="UTF-8" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%m%n"/>
+        </layout>
+    </appender>
+    <appender name="perfomance" class="com.expedia.e3.es.payment.common.performance.writer.log4j.FormattingAsyncAppender">
+        <param name="BufferSize" value="10000"/>
+        <param name="Blocking" value="false"/>
+        <layout class="com.expedia.e3.es.payment.common.performance.writer.log4j.ContextPatternLayout">
+            <param name="ConversionPattern" value="%P{Timestamp:ISO8601} %P"/>
+        </layout>
+        <appender-ref ref="perfomanceAppender"/>
+    </appender>
+    <appender name="perfomanceAppender" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${catalina.base}/logs/evc_perf.log"/>
+        <param name="Append" value="true" />
+        <param name="MaxFileSize" value="50MB" />
+        <param name="MaxBackupIndex" value="100" />
+        <param name="Encoding" value="UTF-8" />
+        <layout class="com.expedia.e3.es.payment.common.performance.writer.log4j.ContextPatternLayout">
+            <param name="ConversionPattern" value="%m%n"/>
+        </layout>
+    </appender>
+    
+    <logger name="evc.error.performance.request" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="perfomance"/>
+    </logger>
+    
+    <logger name="evc.endpoint.performance.request" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="perfomance"/>
+    </logger>
+    
+    <logger name="evc.endpoint.performance.response" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="perfomance"/>
+    </logger>
+    
+    <logger name="evc.webservice.performance.request" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="perfomance"/>
+    </logger>
+    
+    <logger name="evc.webservice.performance.response" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="perfomance"/>
+    </logger>
+    
+     <logger name="evc.client.performance.request" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="perfomance"/>
+    </logger>
+    
+    <logger name="evc.client.performance.response" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="perfomance"/>
+    </logger>
+    
+     <logger name="evc.dao.performance.request" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="perfomance"/>
+    </logger>
+    
+    <logger name="evc.dao.performance.response" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="perfomance"/>
+    </logger>
+
+    <logger name="com.expedia.evc" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="file"/>
+    </logger>
+    
+    <logger name="com.expedia.evc.ws.listener" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="file"/>
+    </logger>
+    
+    <!-- Common Configuration -->
+	<logger name="org.springframework">
+		<level value="WARN"/> 
+	</logger>
+ 
+	<logger name="org.apache.http">
+		<level value="WARN"/> 
+	</logger>
+    
+    <logger name="org.apache.cxf">
+		<level value="WARN"/> 
+	</logger>
+	
+	<logger name="org.apache.commons.dbcp">
+		<level value="WARN"/> 
+	</logger>
+	
+	<logger name="org.apache.commons.pool">
+		<level value="WARN"/> 
+	</logger>
+	
+	<logger name="java.net">
+		<level value="WARN"/> 
+	</logger>  
+	    
+    <root>
+        <level value="WARN"/>
+        <appender-ref ref="file"/>
+    </root>
+
+</log4j:configuration>

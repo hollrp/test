@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.expedia.evc.persistence.dao.IModificationRequestReserveDao">
+	<insert id="addModificationRequest" parameterType="ModificationRequestDO">
+		INSERT dbo.CreditCardModificationRequestReserve
+		(
+		CreditCardModificationRequestTypeID,
+		Status,
+		CardIssuerAPIErrorID,
+		RetryCount,
+		AuditLogID,
+		BlockingRequestBool,
+		PriorityRank,
+		CCAccountNbr,
+		CCVCode,
+		CardBucketID,
+		CardPayeeID,
+		CreditCardID,
+		CreditLimitAmt,
+		ExpirationDate,
+		ValidDateStart,
+		ValidDateEnd,
+		BookingCurrencyID,
+		BookingCurrencyExchangeRate,
+		CreditCardAttributes,
+		RequestAttributes,
+		CreatedBy,
+		CreatedDate,
+		LastUpdatedBy,
+		LastUpdatedDate
+		)
+		VALUES(
+		#{creditCardModificationRequestTypeID},
+		#{status},
+		NULL,
+		0,
+		NULL,
+		#{blockingRequestBool},
+		#{priorityRank},
+		CONVERT(varbinary(MAX),
+		#{ccAccountNbr}),
+		CONVERT(varbinary(MAX), #{ccvCode}),
+		#{cardBucketID},
+		#{cardPayeeID},
+		#{creditCardID},
+		#{creditLimitAmt},
+		#{expirationDate},
+		#{validDateStart},
+		#{validDateEnd},
+		NULL,
+		#{bookingCurrencyExchangeRate},
+		#{creditCardAttributes},
+		#{requestAttributes},
+		CONVERT(VARCHAR(32), #{createdBy}),
+		CURRENT_TIMESTAMP,
+		CONVERT(VARCHAR(32), #{lastUpdatedBy}),
+		CURRENT_TIMESTAMP
+		)
+	</insert>
+	<select id="getTopModificationRequest" resultType="ModificationRequestDO">
+		DELETE TOP(1) r OUTPUT DELETED.* FROM dbo.CreditCardModificationRequestReserve r WITH(READPAST)
+	</select>
+	<select id="getRequestQueueSize" resultType="int">
+		SELECT COUNT(*) FROM dbo.CreditCardModificationRequestReserve WITH(NOLOCK)
+	</select>
+</mapper>

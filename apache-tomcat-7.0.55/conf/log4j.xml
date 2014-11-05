@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<!--
+    Copyright 2012 Expedia, Inc. All rights reserved.
+    EXPEDIA PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
+-->
+
+<log4j:configuration debug="true" xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+	<!-- DEV Configuration -->
+    <appender name="evcadmintoolAppender" class="com.expedia.evc.admintool.common.logging.AsyncAppender">
+        <param name="BufferSize" value="1000"/>
+		<param name="Blocking" value="false"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d %-5p %t %c - %m"/>
+        </layout>
+        <appender-ref ref="evcadmintoolFileAppender"/>
+    </appender>
+    <appender name="evcadmintoolFileAppender" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${catalina.base}/logs/evcadmintool.log"/>
+        <param name="Append" value="true" />
+        <param name="MaxFileSize" value="10MB" />
+        <param name="MaxBackupIndex" value="100" />
+        <param name="Encoding" value="UTF-8" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%m%n"/>
+        </layout>
+    </appender>
+    <appender name="perfomanceAppender" class="com.expedia.evc.admintool.common.logging.AsyncAppender">
+        <param name="BufferSize" value="1000"/>
+		<param name="Blocking" value="false"/>
+        <layout class="com.expedia.e3.es.payment.common.performance.writer.log4j.ContextPatternLayout">
+            <param name="ConversionPattern" value="%P{Timestamp:ISO8601} %P"/>
+        </layout>
+        <appender-ref ref="perfomanceFileAppender"/>
+    </appender>
+    <appender name="perfomanceFileAppender" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${catalina.base}/logs/evcadmintool-perf.log"/>
+        <param name="Append" value="true" />
+        <param name="MaxFileSize" value="50MB" />
+        <param name="MaxBackupIndex" value="100" />
+        <param name="Encoding" value="UTF-8" />
+        <layout class="com.expedia.e3.es.payment.common.performance.writer.log4j.ContextPatternLayout">
+            <param name="ConversionPattern" value="%m%n"/>
+        </layout>
+    </appender>
+    
+    <logger name="performance.request" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="perfomanceAppender"/>
+    </logger>
+    
+    <logger name="performance.response" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="perfomanceAppender"/>
+    </logger>
+    
+    
+
+    <logger name="com.expedia.evc.admintool" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="evcadmintoolAppender"/>
+    </logger>
+    
+    
+    
+    <!-- Common Configuration -->
+	<logger name="org.springframework">
+		<level value="WARN"/> 
+	</logger>
+ 
+	<logger name="org.apache">
+		<level value="WARN"/> 
+	</logger>
+    
+    <logger name="net.sf.ehcache">
+		<level value="WARN"/> 
+	</logger>
+	
+	<logger name="com.expedia.globalpayments.admin">
+		<level value="ERROR"/> 
+	</logger>
+	    
+    <root>
+        <level value="WARN"/>
+        <appender-ref ref="evcadmintoolAppender"/>
+    </root>
+
+</log4j:configuration>

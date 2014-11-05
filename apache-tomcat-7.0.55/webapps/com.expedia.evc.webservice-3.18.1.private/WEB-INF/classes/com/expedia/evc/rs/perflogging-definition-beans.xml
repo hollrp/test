@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2013 Expedia, Inc. All rights reserved. EXPEDIA PROPRIETARY/CONFIDENTIAL. 
+	Use is subject to license terms. Performance logging beans for Card service. -->
+<beans xmlns="http://www.springframework.org/schema/beans"
+
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+           http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+	
+	<!-- ENDPOINT logging configuration -->
+	<bean
+		id="com.expedia.evc.webservice.performance.endpoint.restservice.LoggingFilter"
+		class="com.expedia.e3.es.payment.common.performance.interceptor.endpoint.EndpointLoggingServletFilter">
+		<property name="configuration"
+			ref="com.expedia.evc.webservice.performance.endpoint.Config" />
+
+		<property name="requestWriter" ref="com.expedia.evc.webservice.performance.endpoint.RequestWriter" />
+		
+		<property name="responseWriter" ref="com.expedia.evc.webservice.performance.endpoint.restservice.ResponseWriter"/>
+
+		<property name="requestFieldExtractors">
+			<list>
+				<bean
+					class="com.expedia.e3.es.payment.common.performance.interceptor.metadata.SpelFieldExtractor">
+					<property name="extractRules">
+						<map>
+							<entry key="OperationName" value="T(com.expedia.evc.logging.perflog.rs.Operation).findOperationName(#request.getRequestURI(), #request.getMethod())" />
+							<entry key="RequestPath" value="T(com.expedia.evc.logging.perflog.rs.Operation).findRequestPath(#request.getRequestURI())" />
+	      					<entry key="HttpMethod" value="#request.getMethod()" />
+	                        <entry key="TransactionGUID" value="#requestHeaders['transaction-id']"/>
+	                        <entry key="RequestID" value="#requestHeaders['request-id']"/>
+	                        <entry key="ClientID" value="T(com.expedia.evc.security.SecurityUtil).extractUsername(#requestHeaders['authorization'])"/>
+						</map>
+					</property>
+				</bean>
+			</list>
+		</property>
+		<property name="responseFieldExtractors">
+			<list>
+				<bean
+					class="com.expedia.e3.es.payment.common.performance.interceptor.metadata.SpelFieldExtractor">
+					<property name="extractRules">
+						<map>
+							<entry key="StatusCode" value="#response.status" />
+							<entry key="Success" value="@endpointErrorStatus.success" />
+							<entry key="ErrorType" value="@endpointErrorStatus.errorType" />
+						</map>
+					</property>
+					<property name="beanResolver">
+						<bean class="com.expedia.evc.logging.perflog.DefaultBeanResolver" />
+					</property>
+				</bean>
+			</list>
+		</property>
+	</bean>
+	<bean id="com.expedia.evc.webservice.performance.endpoint.restservice.ResponseWriter"
+		class="com.expedia.e3.es.payment.common.performance.writer.FilteringWriter">
+		<property name="filterList">
+			<bean
+				class="com.expedia.e3.es.payment.common.performance.writer.filter.JSONPathFilter">
+				<property name="pathElements"
+					value="${com.expedia.evc.webservice.logging.masking.endpoint.response/jsonFilter}" />
+			</bean>
+		</property>
+		<property name="writer">
+			<bean
+				class="com.expedia.e3.es.payment.common.performance.writer.log4j.Log4jWriter">
+				<constructor-arg value="evc.endpoint.performance.response" />
+			</bean>
+		</property>
+	</bean>	
+	
+ 	<!-- Resource logging -->
+	<bean id="restServiceResourceProxyCreator"
+	 class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+	    <property name="interceptorNames">
+	        <list>
+	            <idref bean="com.expedia.evc.webservice.performance.service.LoggingInterceptor"/>
+	        </list>
+	    </property>
+	    <property name="beanNames">
+	        <list>
+	            <idref bean="configServiceResource"/>
+	            <idref bean="adminServiceResource"/>
+	        </list>
+	    </property>
+	</bean>
+
+</beans>
+

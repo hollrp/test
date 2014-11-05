@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.expedia.evc.persistence.dao.ICardDao">
+
+	<select id="getCardDetails" parameterType="int" resultMap="resultCardRequestAttributes">
+		SELECT TOP 1
+		cca.CreditCardID as 'cardId',
+		cca.CardBucketID as
+		'bucketId',
+		scb.cardType as 'cardType',
+		cca.CreditCardAttributes as
+		'creditCardAttributes',
+		scb.MCCGroupId as 'mccGroupId',
+		dbo.base64_encode(CONVERT(VARCHAR(255), cca.CCAccountNbr)) as
+		'cardNumber',
+		cca.ExpirationDate as 'expirationDate',
+		CONVERT(VARCHAR(255), cca.CCVCode) as 'securityCode',
+		scb.CurrencyCode
+		as 'currencyCode',
+		cca.CreditLimitAmt as 'creditLimit',
+		scb.CardIssuerName as 'cardIssuerName',
+		cca.ValidDateStart as
+		'startDate',
+		cca.ValidDateEnd as 'endDate',
+		cca.DeactivatedOnDate as
+		'deactivatedOnDate',
+		cca.RequestedOnDate as 'requestedOnDate',
+		cca.RequestAttributes as
+		'requestAttributes'
+		FROM
+		dbo.CreditCard cca WITH (NOLOCK)
+		INNER JOIN dbo.StaticCardBucketDetails
+		scb
+		on scb.CardBucketID=cca.CardBucketID
+		where cca.CreditCardID =
+		#{cardId}
+	</select>
+
+	<select id="getBillingAddress" parameterType="short" resultType="NameValueDO">
+		SELECT s.SettingName as 'name',
+		sv.Value AS 'value'
+		FROM
+		dbo.CCModConfigurationSettingValue sv
+		JOIN
+		dbo.CCModConfigurationSetting s WITH (NOLOCK) ON
+		s.CCModConfigurationSettingID = sv.CCModConfigurationSettingID
+		WHERE
+		sv.SettingValueID = 0 and
+		sv.CCModConfigurationValueSetID=#{configurationValueSetID}
+	</select>
+
+	<select id="getCardHolderName" parameterType="short" resultType="string">
+		select cr.CardRequestorName
+		FROM dbo.CardRequestor cr
+		JOIN dbo.MCCGroup
+		mcc on cr.CardRequestorID = mcc.CardRequestorID
+		WHERE mcc.MCCGroupID =
+		#{mccGroupId}
+	</select>
+	<resultMap id="resultCardInfoRequestAttributes" type="CreditCardInfoDO">
+		<result property="requestAttributes" column="requestAttributes"
+			typeHandler="com.expedia.evc.persistence.mybatis.typehandler.RequestAttributesTypeHandler" />
+	</resultMap>
+	<select id="getCardInfo" parameterType="int" resultType="CreditCardInfoDO">
+		SELECT
+		TOP 1 cc.CreditCardID as 'creditCardId',
+		cc.DeactivatedOnDate as
+		'deactivatedOn',
+		cc.CardBucketID as 'bucketId',
+		cc.CreditLimitAmt as 'creditLimitAmount',
+		mccp.CardPayeeID as 'cardPayeeId'
+		FROM dbo.CreditCard cc 
+	INNER JOIN dbo.CardBucket cb   WITH (NOLOCK) on cc.CardBucketID=cb.CardBucketID
+	INNER JOIN dbo.CardBucketType cbt  		WITH (NOLOCK) on cbt.CardBucketTypeID=cb.CardBucketTypeID
+	INNER JOIN dbo.MCCGroup mcc   			WITH (NOLOCK) on mcc.MCCGroupID = cbt.MCCGroupID
+	INNER JOIN dbo.CCModClientCardBucketType ccbt  	WITH (NOLOCK) on ccbt.CardBucketTypeID = cbt.CardBucketTypeID
+	INNER JOIN dbo.CCModClient ccmc  				WITH (NOLOCK) on ccmc.CCModClientID = ccbt.CCModClientID
+	INNER JOIN dbo.MCCGroupCardPayee mccp  	WITH (NOLOCK) on mccp.MCCGroupID = mcc.MCCGroupID
+	where cc.CreditCardID=#{cardId}
+	</select>
+
+
+	<select id="getCardAndCurrencyInfo" parameterType="int"
+		resultMap="resultCardInfoRequestAttributes">
+		SELECT TOP 1 cc.CreditCardID as 'creditCardId',
+		cc.DeactivatedOnDate as 'deactivatedOn',
+		cc.CardBucketID as 'bucketId',
+		cc.CreditLimitAmt as 'cardLimit',
+		cc.CardPayeeID as 'cardPayeeID',
+		cc.ValidDateStart as 'startDate',
+		cc.ValidDateEnd as 'endDate',
+		cc.ExpirationDate as 'expirationDate',
+		curr.CurrencyCode as
+		'currencyCode',
+		cc.RequestAttributes as
+		'requestAttributes'
+		FROM
+		dbo.CreditCard cc
+		INNER JOIN
+		dbo.CardBucket cb WITH (NOLOCK) on
+		cb.CardBucketID =
+		cc.CardBucketID
+		INNER JOIN dbo.CardBucketType cbt WITH
+		(NOLOCK) on
+		cbt.CardBucketTypeID=cb.CardBucketTypeID
+		INNER JOIN
+		dbo.Currency curr
+		WITH (NOLOCK) on curr.CurrencyID =
+		cbt.CurrencyID
+		 where cc.CreditCardID=#{cardId}
+	</select>
+
+
+	<select id="acquireCardLock" 
+		resultType="AccountInfoDO">
+		UPDATE TOP (1) t
+		SET t.CardStatusId=3,
+		t.LastUpdatedBy=#{cardParameters.lastUpdatedBy}
+		output
+		inserted.CreditCardID as 'creditCardId',
+		inserted.[CCAccountNbr] as
+		'cardNumber',
+		inserted.[CCVCode] as 'securityCode',
+		inserted.[ExpirationDate] as 'expirationDate',
+		inserted.[SharedCardBool] as 'sharedCardBool'
+		FROM
+		dbo.CreditCardAvailable t
+		WITH(READPAST,FORCESEEK)
+		WHERE
+		t.CardBucketID=#{cardParameters.cardBucketId} AND
+		(
+			(t.CardStatusID = 1 OR t.CardStatusID IS NULL)
+		)
+		
+	</select>
+
+
+	<select id="getFxCardInfo" resultType="FxCreditCardInfoDO">
+		SELECT
+		cc.CreditCardID,
+		cc.CardBucketID,
+		cur.CurrencyCode as
+		BucketCurrencyCode,
+		cc.BookingCurrencyCode as BookingCurrencyCode,
+		cc.RequestAttributes.value('(/Attribute[@name="FxCurrencyAmount"]/@value)[1]',
+		'varchar(30)') as BookingAmount,
+		cc.RequestAttributes.value('(/Attribute[@name="FxConversionRate"]/@value)[1]',
+		'varchar(30)') as FxConversionRate
+		FROM dbo.CreditCardArchive cc
+		WITH(NOLOCK)
+		INNER JOIN dbo.CardBucket as b WITH(NOLOCK) ON
+		b.CardBucketID =
+		cc.CardBucketID
+		INNER JOIN dbo.CardBucketType as bt
+		WITH(NOLOCK) ON bt.CardBucketTypeID =
+		b.CardBucketTypeID
+		INNER JOIN
+		dbo.Currency as cur WITH(NOLOCK) ON cur.CurrencyID =
+		bt.CurrencyID
+		WHERE cc.CreditCardID=#{creditCardId}
+		AND cc.SharedCardBool=0
+		AND
+		cur.CurrencyCode &lt;> cc.BookingCurrencyCode
+		AND cc.RequestedOnDate IS
+		NOT
+		NULL
+		AND cc.DeactivatedOnDate IS NULL
+		
+	</select>
+
+	<select id="getFxCardInfos" resultType="FxCreditCardInfoDO">
+		DELETE TOP(#{numberOfCardsToReturn}) r
+		OUTPUT DELETED.CreditCardID,
+		cc.CardBucketID,
+		cur.CurrencyCode as BucketCurrencyCode,
+		cc.BookingCurrencyCode,
+		cc.BookingCurrencyAmount as BookingAmount,
+		cc.BookingCurrencyExchangeRate as FxConversionRate,
+		cc.RequestAttributes.value('(/Attribute[@name="OverTolerance"]/@value)[1]',
+		'varchar(30)') as OverTolerance
+		FROM transient.CreditCardAdjustment r WITH(READPAST)
+		INNER JOIN dbo.CreditCardArchive cc WITH(NOLOCK) ON cc.CreditCardID = r.CreditCardID
+		INNER JOIN dbo.CardBucket as b WITH(NOLOCK) ON b.CardBucketID = cc.CardBucketID
+		INNER JOIN dbo.CardBucketType as bt WITH(NOLOCK) ON bt.CardBucketTypeID = b.CardBucketTypeID
+		INNER JOIN dbo.Currency as cur WITH(NOLOCK) ON cur.CurrencyID = bt.CurrencyID
+	</select>
+	<select id="fetchAllCardsForRateAdjustment" statementType="CALLABLE"
+		resultType="long">
+		{
+		CALL dbo.RateAdjustment#01(
+		#{daysInAdvanceToCheck,
+		mode=IN, jdbcType=SMALLINT},
+		#{maxAdjustmentCount, mode=IN,
+		jdbcType=SMALLINT},
+		#{hoursToWaitBetweenAdjustments, mode=IN,
+		jdbcType=SMALLINT},
+		#{processTimeMinutes, mode=IN, jdbcType=SMALLINT},
+		#{batchSize, mode=IN, jdbcType=INTEGER},
+		#{requestor, mode=IN,
+		jdbcType=VARCHAR},
+		#{scanDelay, mode=IN, jdbcType=SMALLINT})
+		}
+	</select>
+
+	<select id="getCardCountFetchedForAdjustment" resultType="int" parameterType="int">
+	       IF EXISTS (SELECT TOP 1 CreditCardID FROM transient.CreditCardAdjustment WITH(NOLOCK))
+	                 AND
+              EXISTS (SELECT 1 FROM dbo.SystemValue WITH(NOLOCK) WHERE SystemValueName = 'RateAdjStartedDate'
+                     AND CAST(SystemValueValue AS DATETIME) &lt; DATEADD(MINUTE, (-1)*#{batchProcessTimeMinutes}, GETDATE()))
+              SELECT COUNT(CreditCardID) FROM transient.CreditCardAdjustment WITH(NOLOCK) 
+           ELSE 
+              SELECT 0;
+    </select>
+	
+	<select id="getCards" resultMap="resultCardRequestAttributes"
+		parameterType="com.expedia.evc.model.CardSearchCriteria">
+
+		SELECT TOP(#{length})
+		cc.CreditCardID as 'cardId',
+		dbo.base64_encode(CONVERT(VARCHAR(255),cc.CCAccountNbr)) as
+		'cardNumber',
+		CONVERT(VARCHAR(255), cc.CCVCode) as 'securityCode',
+		cc.CreditLimitAmt as 'creditLimit',
+		cc.ExpirationDate,cc.ValidDateStart as 'startDate',
+		cc.ValidDateEnd as
+		'endDate',
+		ci.CardIssuerName, ct.CardTypeName as 'cardType',
+		c.CurrencyCode as 'currencyCode',
+		COALESCE((SELECT CurrencyCode FROM
+		Currency WHERE CurrencyId =
+		cc.BookingCurrencyID),c.CurrencyCode) as
+		'bookingCurrencyCode',
+		cc.CreditCardAttributes,
+		cc.RequestAttributes as
+		'requestAttributes',
+		cc.RequestedOnDate, cc.DeactivatedOnDate
+		FROM
+		CreditCardArchive as cc WITH(NOLOCK)
+		INNER JOIN CardBucket AS cb WITH
+		(NOLOCK) ON cc.CardBucketID =
+		cb.CardBucketID
+		INNER JOIN CardBucketType
+		AS cbt WITH (NOLOCK) ON cb.CardBucketTypeID =
+		cbt.CardBucketTypeID
+		INNER JOIN Currency AS c WITH (NOLOCK) ON c.CurrencyID =
+		cbt.CurrencyID
+		INNER JOIN CardType AS ct WITH (NOLOCK) ON ct.CardTypeID
+		=
+		cbt.CardTypeID
+		INNER JOIN MCCGroup AS g WITH (NOLOCK) ON g.MCCGroupID
+		= cbt.MCCGroupID
+		INNER JOIN CardIssuer AS ci WITH (NOLOCK) ON
+		g.CardIssuerID =
+		ci.CardIssuerID
+		<where>
+			<if test="(bookingItemId != null) or (merchantId != null)">
+				CreditCardID IN (
+
+				SELECT csv1.CreditCardID FROM
+				CreditCardSearchableAttributeValue as csv1 WITH (NOLOCK)
+				INNER
+				JOIN CreditCardSearchableAttribute as csa1 WITH (NOLOCK) on
+				csv1.CreditCardSearchableAttributeID=csa1.CreditCardSearchableAttributeID
+				INNER JOIN CCModConfigurationSetting as mcs1 WITH (NOLOCK) on
+				csa1.CCModConfigurationSettingID=mcs1.CCModConfigurationSettingID
+				<if test="(bookingItemId != null) and (merchantId != null)">
+					inner join CreditCardSearchableAttributeValue as
+					csv2 WITH
+					(NOLOCK) on csv1.CreditCardID = csv2.CreditCardID
+					INNER
+					JOIN CreditCardSearchableAttribute as csa2 WITH (NOLOCK) on
+					csv2.CreditCardSearchableAttributeID=csa2.CreditCardSearchableAttributeID
+					INNER JOIN CCModConfigurationSetting as mcs2 WITH (NOLOCK) on
+					csa2.CCModConfigurationSettingID=mcs2.CCModConfigurationSettingID
+				</if>
+				<where>
+					<choose>
+						<when test="(bookingItemId != null) and (merchantId != null)">
+							mcs1.SettingName='BookingItemID' AND
+							csv1.AttributeValue = #{bookingItemId}
+							AND
+							mcs2.SettingName='MerchantID' AND csv2.AttributeValue =
+							#{merchantId}
+						</when>
+						<otherwise>
+							<choose>
+								<when test="bookingItemId != null">
+									mcs1.SettingName='BookingItemID' AND
+									csv1.AttributeValue = #{bookingItemId}
+								</when>
+								<when test="merchantId != null">
+									AND mcs1.SettingName='MerchantID' AND
+									csv1.AttributeValue =
+									#{merchantId}
+								</when>
+							</choose>
+						</otherwise>
+
+					</choose>
+				</where>
+				)
+			</if>
+			<if test="currencyCode != null">
+				AND c.CurrencyCode = #{currencyCode}
+			</if>
+			<if test="bookingCurrencyCode != null">
+				AND cc.BookingCurrencyCode = #{bookingCurrencyCode}
+			</if>
+
+			<if test="cardTypeName != null and cardIssuerName != null">
+				AND EXISTS
+				(
+				SELECT TOP 1 1
+				from CardBucket AS cb WITH
+				(NOLOCK)
+				INNER JOIN CardBucketType AS cbt WITH (NOLOCK) ON
+				cb.CardBucketTypeID =
+				cbt.CardBucketTypeID
+				INNER JOIN CardType AS ct
+				WITH (NOLOCK) ON ct.CardTypeID = cbt.CardTypeID
+				INNER JOIN MCCGroup
+				AS g WITH (NOLOCK) ON g.MCCGroupID =
+				cbt.MCCGroupID
+				INNER JOIN
+				CardIssuer AS ci WITH (NOLOCK) ON g.CardIssuerID =
+				ci.CardIssuerID
+				WHERE ct.CardTypeName=#{cardTypeName} and
+				ci.CardIssuerName=#{cardIssuerName}
+				)
+			</if>
+			<if test="cardTypeName != null">
+				AND ct.CardTypeName = #{cardTypeName}
+			</if>
+			<if test="cardIssuerName != null">
+				AND ci.CardIssuerName = #{cardIssuerName}
+			</if>
+			<if test="cardId != null">
+				AND cc.CreditCardID = #{cardId}
+			</if>
+			<if test="cardNumber != null">
+				AND cc.CreditCardID in ( SELECT CreditCardID from
+				CreditCardArchive
+				WHERE cc.CCAccountNbrCheckSum =
+				CHECKSUM(CONVERT(VARBINARY(128),dbo.base64_decode(#{cardNumber}))))
+			</if>
+			<if test="validStartDate != null">
+				AND cc.ValidDateStart &lt;= #{validEndDate}
+			</if>
+			<if test="validEndDate != null">
+				AND cc.ValidDateEnd >= #{validStartDate}
+			</if>
+			<if
+				test="expirationDateRange != null and expirationDateRange.lowerBound!=null and expirationDateRange.upperBound!=null">
+				AND CreditCardID in ( SELECT CreditCardID from
+				CreditCardArchive WHERE
+				ExpirationDate between
+				#{expirationDateRange.lowerBound}
+				AND
+				#{expirationDateRange.upperBound})
+			</if>
+			<if test="status!= null and status=='deactivated'">
+				AND cc.DeactivatedOnDate is not NULL
+			</if>
+			<if test="status!= null and status=='issued'">
+				AND cc.DeactivatedOnDate is NULL
+			</if>
+			<if test="status!= null and status=='available'">
+				AND cc.DeactivatedOnDate is NULL
+			</if>
+
+			and RequestedOnDate is not NULL
+
+
+
+		</where>
+	</select>
+	<select id="getCard" parameterType="int" resultMap="resultCardRequestAttributes">
+		SELECT TOP 1
+		cc.CreditCardID as 'cardId',
+		dbo.base64_encode(CONVERT(VARCHAR(255),cc.CCAccountNbr)) as
+		'cardNumber',
+		CONVERT(VARCHAR(255), cc.CCVCode) as 'securityCode',
+		cc.CreditLimitAmt as 'creditLimit',
+		cc.ExpirationDate,cc.ValidDateStart as 'startDate',
+		cc.ValidDateEnd as
+		'endDate',
+		ci.CardIssuerName, ct.CardTypeName as 'cardType',
+		c.CurrencyCode as 'currencyCode',		
+		cc.BookingCurrencyCode as
+		'bookingCurrencyCode',
+		cc.CreditCardAttributes,
+		cc.RequestAttributes as
+		'requestAttributes',
+		cc.RequestedOnDate, cc.DeactivatedOnDate
+		FROM
+		CreditCardArchive as cc WITH(NOLOCK)
+		INNER JOIN CardBucket AS cb WITH
+		(NOLOCK) ON cc.CardBucketID =
+		cb.CardBucketID
+		INNER JOIN CardBucketType
+		AS cbt WITH (NOLOCK) ON cb.CardBucketTypeID =
+		cbt.CardBucketTypeID
+		INNER JOIN Currency AS c WITH (NOLOCK) ON c.CurrencyID =
+		cbt.CurrencyID
+		INNER JOIN CardType AS ct WITH (NOLOCK) ON ct.CardTypeID
+		=
+		cbt.CardTypeID
+		INNER JOIN MCCGroup AS g WITH (NOLOCK) ON g.MCCGroupID
+		= cbt.MCCGroupID
+		INNER JOIN CardIssuer AS ci WITH (NOLOCK) ON
+		g.CardIssuerID =
+		ci.CardIssuerID
+		where cc.CreditCardID = #{cardId}
+	</select>
+	<resultMap id="resultCardRequestAttributes" type="CreditCardDetailsDO">
+		<result property="requestAttributes" column="requestAttributes"
+			typeHandler="com.expedia.evc.persistence.mybatis.typehandler.RequestAttributesTypeHandler" />
+	</resultMap>
+
+</mapper>

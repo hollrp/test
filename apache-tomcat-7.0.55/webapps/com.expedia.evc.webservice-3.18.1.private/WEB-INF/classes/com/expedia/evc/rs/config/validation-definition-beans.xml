@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.1.xsd">
+
+	<!-- Request fields validation beans -->
+	<bean id="configServiceValidator" class="com.expedia.evc.rs.validation.BaseValidator" abstract="true">
+		<property name="messageSource" ref="messageSource" />
+	</bean>
+
+	<bean id="request.requiredRequestIdHeaderValidator" class="com.expedia.evc.rs.validation.RequiredAtLeastOneHeaderValueValidator" parent="configServiceValidator">
+		<property name="error">
+			<util:constant static-field="com.expedia.evc.rs.model.RestServiceError.REQUEST_ID_MISSING" />
+		</property>
+	</bean>
+	
+	<bean id="request.requestIdFormatValidator" class="com.expedia.evc.rs.validation.UuidFormatValidator" parent="configServiceValidator">
+		<property name="error">
+			<util:constant static-field="com.expedia.evc.rs.model.RestServiceError.REQUEST_ID_INVALID" />
+		</property>	
+	</bean>
+	
+	<bean id="request.requestIdHeaderValuesValidator" class="com.expedia.evc.rs.validation.RequiredHeaderValidator" parent="configServiceValidator">
+		<property name="valueMandatoryValidator" ref="request.requiredRequestIdHeaderValidator" />
+		<property name="valueValidator" ref="request.requestIdFormatValidator" />
+	</bean>
+	
+	<bean id="request.requiredTransactionIdHeaderValidator" class="com.expedia.evc.rs.validation.RequiredAtLeastOneHeaderValueValidator" parent="configServiceValidator">
+		<property name="error">
+			<util:constant static-field="com.expedia.evc.rs.model.RestServiceError.TRANSACTION_ID_MISSING" />
+		</property>
+	</bean>
+	
+	<bean id="request.transactionIdFormatValidator" class="com.expedia.evc.rs.validation.UuidFormatValidator" parent="configServiceValidator">
+		<property name="error">
+			<util:constant static-field="com.expedia.evc.rs.model.RestServiceError.TRANSACTION_ID_INVALID" />
+		</property>	
+	</bean>
+	
+	<bean id="request.transactionIdHeaderValuesValidator" class="com.expedia.evc.rs.validation.RequiredHeaderValidator" parent="configServiceValidator">
+		<property name="valueMandatoryValidator" ref="request.requiredTransactionIdHeaderValidator" />
+		<property name="valueValidator" ref="request.transactionIdFormatValidator" />
+	</bean>
+
+	<bean id="request.requiredContentTypeHeaderValidator" class="com.expedia.evc.rs.validation.RequiredAtLeastOneHeaderValueValidator" parent="configServiceValidator">
+		<property name="error">
+			<util:constant static-field="com.expedia.evc.rs.model.RestServiceError.CONTENT_TYPE_MISSING" />
+		</property>
+	</bean>
+	
+	<bean id="request.contentTypeValueValidator" class="com.expedia.evc.rs.validation.ContentTypeValueValidator" parent="configServiceValidator"/>
+	
+	<bean id="request.contentTypeHeaderValuesValidator" class="com.expedia.evc.rs.validation.RequiredHeaderValidator" parent="configServiceValidator">
+		<property name="valueMandatoryValidator" ref="request.requiredContentTypeHeaderValidator" />
+		<property name="valueValidator" ref="request.contentTypeValueValidator" />
+	</bean>
+
+	<bean id="merchantRefIdAvailabilityValidator" class="com.expedia.evc.rs.validation.MandatoryStringValidator" parent="configServiceValidator">
+		<property name="error">
+			<util:constant static-field="com.expedia.evc.rs.model.RestServiceError.MERCHANT_REF_ID_MISSING" />
+		</property>
+	</bean>
+
+	<bean id="requestedByValidator" class="com.expedia.evc.rs.validation.MandatoryStringValidator" parent="configServiceValidator">
+		<property name="error">
+			<util:constant static-field="com.expedia.evc.rs.model.RestServiceError.REQUESTED_BY_MISSING" />
+		</property>
+	</bean>
+
+	<bean id="currencyConfigValidator" class="com.expedia.evc.rs.validation.CurrencyConfigValidator" parent="configServiceValidator">
+		<property name="error">
+			<util:constant static-field="com.expedia.evc.rs.model.RestServiceError.INVALID_CURRENCY_CODE" />
+		</property>  
+	</bean>
+
+	<bean id="overTolerancePercentageValidator" class="com.expedia.evc.rs.validation.OverTolerancePercentageValidator"
+		parent="configServiceValidator">
+		<property name="evcConfig" ref="evcConfig" />
+	</bean>
+
+	<bean id="underTolerancePercentageValidator" class="com.expedia.evc.rs.validation.UnderTolerancePercentageValidator"
+		parent="configServiceValidator">
+		<property name="evcConfig" ref="evcConfig" />
+	</bean>
+
+	<!-- Request object validation beans -->
+	<bean id="request.configRequestValidator" class="com.expedia.evc.rs.validation.ConfigRequestValidator">
+		<property name="requestedByValidator" ref="requestedByValidator" />
+		<property name="currencyConfigValidator" ref="currencyConfigValidator" />
+		<property name="overTolerancePercentageValidator" ref="overTolerancePercentageValidator" />
+		<property name="underTolerancePercentageValidator" ref="underTolerancePercentageValidator" />
+	</bean>
+
+	<!-- Service layer model validation beans -->
+	<bean id="service.cardTypeNameValidator" class="com.expedia.evc.service.validation.config.CardTypeNameValidator"
+		parent="configServiceValidator">
+		<property name="cache" ref="evcLevel2Cache" />
+		<property name="cardTypesDao" ref="cardTypesDao" />
+	</bean>
+	
+	<bean id="service.merchantTypeIdValidator" class="com.expedia.evc.service.validation.config.MerchantTypeIdValidator"
+		parent="configServiceValidator">
+		<property name="merchantConfigDao" ref="merchantConfigDao" />
+	</bean>
+
+	<bean id="service.merchantConfigurationIdValidator" 
+		  class="com.expedia.evc.service.validation.config.MerchantConfigurationIdValidator" 
+		  parent="configServiceValidator">
+		<property name="merchantConfigDao" ref="merchantConfigDao" />
+	</bean>
+		  
+	<bean id="service.cardIssuerNamesValidator" class="com.expedia.evc.service.validation.config.CardIssuerNameValidator"
+		parent="configServiceValidator">
+		<property name="cache" ref="evcLevel2Cache" />
+		<property name="cardTypesDao" ref="cardTypesDao" />
+	</bean>
+	
+	<bean id="service.merchantRefAndTypeIdValidator"
+	      class="com.expedia.evc.service.validation.config.AbstractMerchantTypeAndRefIdValidator"
+		  abstract="true">
+		  <property name="messageSource" ref="messageSource" />
+		  <property name="merchantConfigDao" ref="merchantConfigDao" />
+	</bean>
+	
+	<bean id="service.merchantRefAndTypeIdAvailabilityValidator"
+		  class="com.expedia.evc.service.validation.config.MerchantRefAndTypeIdAvailabilityValidator"
+		  parent="service.merchantRefAndTypeIdValidator">
+	</bean>
+	
+	<bean id="service.merchantRefAndTypeIdUnavailabilityValidator"
+		  class="com.expedia.evc.service.validation.config.MerchantRefAndTypeIdUnavailabilityValidator"
+		  parent="service.merchantRefAndTypeIdValidator">
+	</bean>
+
+	<bean id="service.cardIssuerCardTypeCombinationValidator"
+		  class="com.expedia.evc.service.validation.config.CardIssuerCardTypeCombinationValidator"
+		  parent="configServiceValidator">
+		  <property name="cache" ref="evcLevel2Cache" />
+	</bean>
+	
+	<bean id="service.cardIssuerCardTypeCurrencyCombinationValidator"
+		  class="com.expedia.evc.service.validation.config.CardIssuerCardTypeCurrencyCombinationValidator"
+		  parent="configServiceValidator">
+		  <property name="merchantConfigDao" ref="merchantConfigDao" />
+	</bean>
+	
+	<bean id="service.countryCodeValidator"
+		  class="com.expedia.evc.service.validation.config.CountryCodeValidator"
+		  parent="configServiceValidator">
+	</bean>
+	
+	<bean id="service.configRequestValidator" 
+		  class="com.expedia.evc.service.validation.config.ConfigRequestValidator"
+		  parent="configServiceValidator">
+		  <property name="cardTypeNameValidator" ref="service.cardTypeNameValidator" />
+		  <property name="cardIssuerNameValidator" ref="service.cardIssuerNamesValidator" />
+		  <property name="cardIssuerCardTypeCombinationValidator"
+		            ref="service.cardIssuerCardTypeCombinationValidator" />
+		  <property name="cardIssuerCardTypeCurrencyCombinationValidator"
+		            ref="service.cardIssuerCardTypeCurrencyCombinationValidator" />
+	</bean>
+
+</beans>

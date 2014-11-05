@@ -1,0 +1,563 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2013 Expedia, Inc. All rights reserved. EXPEDIA PROPRIETARY/CONFIDENTIAL. 
+	Use is subject to license terms. Performance Logging bean definitions. -->
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+
+	<!-- Common Bean Definitions. -->
+	<!-- Base -->
+	<bean id="com.expedia.evc.webservice.performance.base.Config"
+		class="com.expedia.e3.es.payment.common.performance.Configuration">
+		<property name="productName"
+			value="${com.expedia.evc.webservice/productName:EvcWebService}" />
+		<property name="enabled"
+			value="${com.expedia.evc.webservice.performance.configuration/enabled:true}" />
+	</bean>
+
+	<!-- ERROR logging configuration -->
+	<bean id="com.expedia.evc.webservice.performance.error.ErrorLogger"
+		class="com.expedia.evc.logging.perflog.ErrorPerfLogger">
+		<property name="configuration"
+			ref="com.expedia.evc.webservice.performance.error.Config" />
+		<property name="logWriter"
+			ref="com.expedia.evc.webservice.performance.error.Writer" />
+	</bean>
+	
+	<bean id="com.expedia.evc.webservice.performance.error.Writer"
+		class="com.expedia.e3.es.payment.common.performance.writer.log4j.Log4jWriter">
+		<constructor-arg value="evc.error.performance.request" />
+	</bean>
+	
+	<bean id="com.expedia.evc.webservice.performance.error.Config"
+		parent="com.expedia.evc.webservice.performance.base.Config">
+		<property name="activityName" value="Error" />
+		<property name="enabledPayload" value="false" />
+	</bean>
+
+	<!-- Transaction GUID logger -->
+	<bean id="com.expedia.evc.webservice.performance.TransactionGUIDLogger"
+		class="com.expedia.evc.logging.perflog.TransactionGUIDLogger"/>
+		
+	<!-- ENDPOINT logging configuration -->
+	<bean
+		id="com.expedia.evc.webservice.performance.endpoint.cardservice.LoggingFilter"
+		class="com.expedia.e3.es.payment.common.performance.interceptor.endpoint.EndpointLoggingServletFilter">
+		<property name="configuration"
+			ref="com.expedia.evc.webservice.performance.endpoint.Config" />
+		<property name="requestWriter"
+			ref="com.expedia.evc.webservice.performance.endpoint.RequestWriter" />
+		<property name="responseWriter"
+			ref="com.expedia.evc.webservice.performance.endpoint.ResponseWriter" />
+		<property name="requestFieldExtractors">
+			<list>
+				<bean
+					class="com.expedia.e3.es.payment.common.performance.interceptor.metadata.XPathFieldExtractor">
+					<property name="namespaces">
+						<map>
+							<entry key="soap" value="http://schemas.xmlsoap.org/soap/envelope/" />
+							<entry key="urn" value="urn:com:expedia:evc:webservice:cardapi:v3" />
+							<entry key="urn1"
+								value="urn:com:expedia:evc:webservice:domain:common:v3" />
+						</map>
+					</property>
+					<property name="extractRules">
+						<map>
+							<entry key="OperationName">
+								<array>
+									<value>substring-before(local-name(/soap:Envelope/soap:Body/*),'RQ')
+									</value>
+								</array>
+							</entry>
+							<entry key="TransactionGUID" value="//urn:MessageInfo/urn1:TransactionGUID" />
+							<entry key="MessageGUID" value="//urn:MessageInfo/urn1:MessageGUID" />
+							<entry key="ClientID" value="//urn:ClientID" />
+							<entry key="CreditCardID" value="//urn:CreditCardID" />
+							<entry key="BookingItemID" value="//urn1:ReferenceValue" />
+						</map>
+					</property>
+				</bean>
+				<bean
+					class="com.expedia.e3.es.payment.common.performance.interceptor.metadata.SpelFieldExtractor">
+					<property name="extractRules">
+						<map>
+							<entry key="ClientID"
+								value="T(com.expedia.evc.security.SecurityUtil).extractUsername(#requestHeaders['authorization'])" />
+						</map>
+					</property>
+				</bean>
+			</list>
+		</property>
+		<property name="responseFieldExtractors">
+			<list>
+				<bean
+					class="com.expedia.e3.es.payment.common.performance.interceptor.metadata.XPathFieldExtractor">
+					<property name="namespaces">
+						<map>
+							<entry key="soap" value="http://schemas.xmlsoap.org/soap/envelope/" />
+							<entry key="urn"
+								value="urn:com:expedia:evc:webservice:domain:common:v3" />
+						</map>
+					</property>
+					<property name="extractRules">
+						<map>
+							<entry key="CardType" value="//urn:CardType" />
+							<entry key="Success" value="not(boolean(//soap:Fault))" />
+							<entry key="ErrorType" value="//urn:ErrorCategoryCode" />
+						</map>
+					</property>
+				</bean>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="com.expedia.evc.webservice.performance.endpoint.Config"
+		parent="com.expedia.evc.webservice.performance.base.Config">
+		<property name="activityName" value="EVC-v3-endpoint" />
+		<property name="enabledPayload"
+			value="${com.expedia.evc.webservice.performance.configuration/enabledPayload:true}" />
+		<property name="enabledHttpInfo"
+			value="${com.expedia.evc.webservice.performance.configuration/enabledHttpInfo:true}" />
+	</bean>
+
+	<bean id="com.expedia.evc.webservice.performance.v1.endpoint.Config"
+		parent="com.expedia.evc.webservice.performance.base.Config">
+		<property name="activityName" value="EVC-v1-endpoint" />
+		<property name="enabledPayload"
+			value="${com.expedia.evc.webservice.performance.configuration/enabledPayload:true}" />
+		<property name="enabledHttpInfo"
+			value="${com.expedia.evc.webservice.performance.configuration/enabledHttpInfo:true}" />
+	</bean>
+
+	<bean id="com.expedia.evc.webservice.performance.endpoint.RequestWriter"
+		class="com.expedia.e3.es.payment.common.performance.writer.FilteringWriter">
+		<property name="filterList">
+			<bean class="com.expedia.evc.logging.perflog.RequestHeadersFilter">
+				<property name="excludeElements" value="authorization" />
+			</bean>
+		</property>
+		<property name="writer">
+			<bean
+				class="com.expedia.e3.es.payment.common.performance.writer.log4j.Log4jWriter">
+				<constructor-arg value="evc.endpoint.performance.request" />
+			</bean>
+		</property>
+
+	</bean>
+
+	<bean id="com.expedia.evc.webservice.performance.endpoint.ResponseWriter"
+		class="com.expedia.e3.es.payment.common.performance.writer.FilteringWriter">
+		<property name="filterList">
+			<bean
+				class="com.expedia.e3.es.payment.common.performance.writer.filter.XMLXpathFilter">
+				<property name="xpathElementsProperty"
+					value="${com.expedia.evc.webservice.logging.masking.endpoint.response/xpathFilter}" />
+			</bean>
+		</property>
+		<property name="writer">
+			<bean
+				class="com.expedia.e3.es.payment.common.performance.writer.log4j.Log4jWriter">
+				<constructor-arg value="evc.endpoint.performance.response" />
+			</bean>
+		</property>
+	</bean>
+
+
+
+
+	<!-- WebService logging configuration -->
+	<bean id="com.expedia.evc.webservice.performance.service.Config"
+		parent="com.expedia.evc.webservice.performance.base.Config">
+		<property name="enabledPayload" value="false" />
+	</bean>
+
+	<bean
+		id="com.expedia.evc.webservice.performance.service.LoggingInterceptor"
+		class="com.expedia.evc.logging.perflog.ClientLoggingInterceptor">
+		<property name="configuration"
+			ref="com.expedia.evc.webservice.performance.service.Config" />
+		<property name="requestWriter"
+			ref="com.expedia.evc.webservice.performance.service.RequestWriter" />
+		<property name="responseWriter"
+			ref="com.expedia.evc.webservice.performance.service.ResponseWriter" />
+	</bean>
+
+	<bean id="com.expedia.evc.webservice.performance.service.RequestWriter"
+		class="com.expedia.e3.es.payment.common.performance.writer.log4j.Log4jWriter">
+		<constructor-arg value="evc.webservice.performance.request" />
+	</bean>
+
+	<bean id="com.expedia.evc.webservice.performance.service.ResponseWriter"
+		class="com.expedia.e3.es.payment.common.performance.writer.log4j.Log4jWriter">
+		<constructor-arg value="evc.webservice.performance.response" />
+	</bean>
+
+
+
+	<!-- Clients logging configuration -->
+	<bean
+		id="com.expedia.evc.webservice.performance.client.LoggingInterceptor"
+		class="com.expedia.evc.logging.perflog.ClientLoggingInterceptor">
+		<property name="configuration"
+			ref="com.expedia.evc.webservice.performance.client.Config" />
+		<property name="requestWriter"
+			ref="com.expedia.evc.webservice.performance.client.RequestWriter" />
+		<property name="responseWriter"
+			ref="com.expedia.evc.webservice.performance.client.ResponseWriter" />
+	</bean>
+	
+
+
+	<bean id="com.expedia.evc.webservice.performance.client.Config"
+		parent="com.expedia.evc.webservice.performance.base.Config">
+		<property name="enabledPayload"
+			value="${com.expedia.evc.webservice.performance.configuration/enabledPayload:true}" />
+		<property name="enabledHttpInfo"
+			value="${com.expedia.evc.webservice.performance.configuration/enabledHttpInfo:true}" />
+	</bean>
+	
+	<bean id="com.expedia.evc.webservice.performance.evcgateway.resttemplate.Config"
+		parent="com.expedia.evc.webservice.performance.base.Config">
+		<property name="activityName" value="EvcGatewayClient" />
+		<property name="enabledPayload"
+			value="${com.expedia.evc.webservice.performance.configuration/enabledPayload:true}" />
+		<property name="enabledHttpInfo"
+			value="${com.expedia.evc.webservice.performance.configuration/enabledHttpInfo:false}" />
+	</bean>
+
+	<bean id="com.expedia.evc.webservice.performance.client.RequestWriter"
+		class="com.expedia.e3.es.payment.common.performance.writer.log4j.Log4jWriter">
+		<constructor-arg value="evc.client.performance.request" />
+	</bean>
+
+	<bean id="com.expedia.evc.webservice.performance.client.ResponseWriter"
+		class="com.expedia.e3.es.payment.common.performance.writer.FilteringWriter">
+		<property name="filterList">
+			<bean
+				class="com.expedia.e3.es.payment.common.performance.writer.filter.XMLXpathFilter">
+				<property name="xpathElementsProperty"
+					value="${com.expedia.evc.webservice.logging.masking.client.response/xpathFilter}" />
+			</bean>
+		</property>
+		<property name="writer">
+			<bean
+				class="com.expedia.e3.es.payment.common.performance.writer.log4j.Log4jWriter">
+				<constructor-arg value="evc.client.performance.response" />
+			</bean>
+		</property>
+	</bean>
+
+	<bean
+		id="com.expedia.evc.webservice.performance.clients.PerflogInterceptorProxyCreator"
+		class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+		<property name="interceptorNames">
+			<list>
+				<idref
+					bean="com.expedia.evc.webservice.performance.client.LoggingInterceptor" />
+			</list>
+		</property>
+		<property name="beanNames">
+			<list>
+				<idref bean="fxrs.Client" />
+				<idref bean="security.UserService" />
+				<idref bean="fxRateAdjustmentProcessingJob" />
+				<idref bean="fxRateAdjustmentFetchJob" />
+				<idref bean="moveReserveRequestJob" />
+				<idref bean="rabbitMQClient"/>
+			</list>
+		</property>
+	</bean>
+	<bean
+		id="com.expedia.evc.webservice.performance.rest.clients.PerflogInterceptorProxyCreator"
+		class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+		<property name="interceptorNames">
+			<list>
+				<idref
+					bean="com.expedia.evc.webservice.performance.evcgateway.client.LoggingInterceptor" />
+			</list>
+		</property>
+		<property name="beanNames">
+			<list>				
+				<idref bean="evcGatewayRestTemplate"/>
+			</list>
+		</property>
+	</bean>
+	<bean
+		id="com.expedia.evc.webservice.performance.evcgateway.client.LoggingInterceptor"
+		class="com.expedia.evc.logging.perflog.ClientLoggingInterceptor">
+		<property name="configuration"
+			ref="com.expedia.evc.webservice.performance.evcgateway.resttemplate.Config" />
+		<property name="requestWriter"
+			ref="com.expedia.evc.webservice.perflog.evcgateway.scrambled.RequestPayloadWriter" />
+		<property name="responseWriter"
+			ref="com.expedia.evc.webservice.performance.client.ResponseWriter" />
+	</bean>
+	
+
+	
+	
+	<bean id="com.expedia.evc.webservice.perflog.evcgateway.scrambled.RequestPayloadWriter"
+		class="com.expedia.e3.es.payment.common.performance.writer.FilteringWriter"
+		p:writer-ref="com.expedia.evc.webservice.performance.client.RequestWriter">
+		<property name="filterList">
+			<list>
+				<bean class="com.expedia.e3.es.payment.common.performance.writer.filter.SpelFilter">
+			       <property name="expressions">
+			           <list>
+			               <value>#frame['RequestURL']=#frame['RequestURL'].replaceAll("(\\?cardNumber=)[^&amp;]*(&amp;)", "$1#SCRAMBLED#$2")</value>
+			           </list>
+			       </property>
+   				</bean>
+			</list>
+		</property>
+	</bean>
+
+	<bean
+		id="com.expedia.evc.webservice.performance.fxAdjustmentService.metadataInterceptor"
+		class="org.springframework.aop.support.NameMatchMethodPointcutAdvisor">
+		<property name="mappedNames" value="adjust" />
+		<property name="advice">
+			<bean
+				class="com.expedia.e3.es.payment.common.performance.interceptor.metadata.MetadataExtractingInterceptor">
+				<property name="configuration"
+					ref="com.expedia.evc.webservice.performance.client.Config" />
+				<property name="invocationQueries">
+					<map>
+						<entry key="CreditCardID" value="/arguments[1]/creditCardID,/arguments[1]" />
+					</map>
+				</property>
+				<property name="resultQueries">
+					<map>
+						<entry key="Adjusted" value="/" />
+					</map>
+				</property>
+				<property name="exceptionQueries">
+					<map>
+						<entry key="ErrorCode" value="/errorCode" />
+						<entry key="Description" value="/description" />
+					</map>
+				</property>
+			</bean>
+		</property>
+	</bean>
+	<bean
+		id="com.expedia.evc.webservice.performance.fxAdjustmentServiceFetchAllCards.metadataInterceptor"
+		class="org.springframework.aop.support.NameMatchMethodPointcutAdvisor">
+		<property name="mappedNames" value="fetchAllCardsForRateAdjustment" />
+		<property name="advice">
+			<bean
+				class="com.expedia.e3.es.payment.common.performance.interceptor.metadata.MetadataExtractingInterceptor">
+				<property name="configuration"
+					ref="com.expedia.evc.webservice.performance.client.Config" />
+				<property name="resultQueries">
+					<map>
+						<entry key="ResponsePayload" value="/" />
+					</map>
+				</property>
+			</bean>
+		</property>
+	</bean>
+	<bean
+		id="com.expedia.evc.webservice.performance.fxAdjustmentServiceFetch.metadataInterceptor"
+		class="org.springframework.aop.support.NameMatchMethodPointcutAdvisor">
+		<property name="mappedNames" value="getAdjustmentBatch" />
+		<property name="advice">
+			<bean
+				class="com.expedia.e3.es.payment.common.performance.interceptor.metadata.MetadataExtractingInterceptor">
+				<property name="configuration"
+					ref="com.expedia.evc.webservice.performance.client.Config" />
+				<property name="resultQueries">
+					<map>
+						<entry key="ResponsePayload" value="fn:join(/)" />
+					</map>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+
+	<bean
+		id="com.expedia.evc.webservice.performance.fxAdjustmentService.metadataInterceptorProxyCreator"
+		class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+		<property name="interceptorNames">
+			<list>
+				<idref
+					bean="com.expedia.evc.webservice.performance.client.LoggingInterceptor" />
+				<idref
+					bean="com.expedia.evc.webservice.performance.fxAdjustmentService.metadataInterceptor" />
+				<idref
+					bean="com.expedia.evc.webservice.performance.fxAdjustmentServiceFetch.metadataInterceptor" />
+				<idref
+					bean="com.expedia.evc.webservice.performance.fxAdjustmentServiceFetchAllCards.metadataInterceptor" />
+			</list>
+		</property>
+		<property name="beanNames">
+			<list>
+				<idref bean="fxRateAdjustmentService" />
+			</list>
+		</property>
+	</bean>
+
+
+	<!-- Common Dao logging configuration -->
+	<bean id="com.expedia.evc.dao.performance.Config" parent="com.expedia.evc.webservice.performance.base.Config">
+		<property name="activityName" value="EVC-v3-dao" />
+		<property name="enabledPayload" value="false" />
+	</bean>
+
+	<bean id="com.expedia.evc.dao.performance.RequestWriter"
+		class="com.expedia.e3.es.payment.common.performance.writer.log4j.Log4jWriter">
+		<constructor-arg value="evc.dao.performance.request" />
+	</bean>
+
+	<bean id="com.expedia.evc.dao.performance.ResponseWriter"
+		class="com.expedia.e3.es.payment.common.performance.writer.log4j.Log4jWriter">
+		<constructor-arg value="evc.dao.performance.response" />
+	</bean>
+
+	<bean id="com.expedia.evc.dao.performance.LoggingInterceptor"
+		class="com.expedia.e3.es.payment.common.performance.interceptor.client.ClientLoggingInterceptor">
+		<property name="configuration" ref="com.expedia.evc.dao.performance.Config" />
+		<property name="requestWriter"
+			ref="com.expedia.evc.dao.performance.RequestWriter" />
+		<property name="responseWriter"
+			ref="com.expedia.evc.dao.performance.ResponseWriter" />
+	</bean>
+
+	<bean id="com.expedia.evc.persistence.interceptor.DaoExceptionInterceptor"
+		class="com.expedia.evc.persistence.interceptor.DaoExceptionInterceptor" />
+
+	<bean
+		id="com.expedia.evc.webservice.performance.dao.PerflogInterceptorProxyCreator"
+		class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+		<property name="interceptorNames">
+			<list>
+				<idref bean="com.expedia.evc.persistence.interceptor.DaoExceptionInterceptor"/>
+				<idref bean="com.expedia.evc.dao.performance.LoggingInterceptor" />
+			</list>
+		</property>
+		<property name="beanNames">
+			<list>
+				<idref bean="bucketDao" />
+				<idref bean="currencyConfigDao" />
+				<idref bean="cardDao" />
+				<idref bean="cardTypesDao" />
+				<idref bean="configurationDao" />
+				<idref bean="currencyDao" />
+				<idref bean="merchantTypeDao" />
+				<idref bean="modificationRequestDao" />
+				<idref bean="modificationRequestReserveDao" />
+				<idref bean="settingsDao" />
+				<idref bean="merchantConfigDao" />
+				<idref bean="countryConfigDao" />
+			</list>
+		</property>
+	</bean>
+
+	<!-- Common Payload Extracting interceptors -->
+	<bean id="http.payloadExtractingInterceptor"
+		class="com.expedia.e3.es.payment.common.performance.interceptor.client.payload.httpclient.PayloadExtractingInterceptor">
+		<property name="configuration"
+			ref="com.expedia.evc.webservice.performance.client.Config" />
+	</bean>
+
+	<!-- ENDPOINT logging configuration for V1 service -->
+	<bean
+		id="com.expedia.evc.webservice.performance.endpoint.v1.cardservice.LoggingFilter"
+		class="com.expedia.e3.es.payment.common.performance.interceptor.endpoint.EndpointLoggingServletFilter">
+		<property name="configuration"
+			ref="com.expedia.evc.webservice.performance.v1.endpoint.Config" />
+		<property name="requestWriter"
+			ref="com.expedia.evc.webservice.performance.endpoint.RequestWriter" />
+		<property name="responseWriter"
+			ref="com.expedia.evc.webservice.performance.endpoint.ResponseWriter" />
+		<property name="requestFieldExtractors">
+			<list>
+				<bean
+					class="com.expedia.e3.es.payment.common.performance.interceptor.metadata.XPathFieldExtractor">
+					<property name="namespaces">
+						<map>
+							<entry key="SOAP-ENV" value="http://www.w3.org/2003/05/soap-envelope" />
+							<entry key="xsi" value="http://www.w3.org/2001/XMLSchema-instance" />
+							<entry key="base" value="urn:expedia:e3:data:basetypes:defn:v2" />
+							<entry key="message" value="urn:expedia:e3:data:messagetypes:defn:v2" />
+							<entry key="finance" value="urn:expedia:e3:data:financetypes:defn:v2" />
+							<entry key="time" value="urn:expedia:e3:data:timetypes:defn:v2" />
+							<entry key="succ"
+								value="urn:expedia:e3:es:succ:service:messages:succtypes:v1" />
+							<entry key="disablecard"
+								value="urn:expedia:e3:es:succ:service:messages:disablecard:v1" />
+							<entry key="applycard"
+								value="urn:expedia:e3:es:succ:service:messages:applycard:v1" />
+							<entry key="getcarddetail"
+								value="urn:expedia:e3:es:succ:service:messages:getcarddetail:v1" />
+							<entry key="getreasoncodes"
+								value="urn:expedia:e3:es:succ:service:messages:getreasoncodes:v1" />
+						</map>
+					</property>
+					<property name="extractRules">
+						<map>
+							<entry key="OperationName">
+								<array>
+									<value>concat(
+										substring("ModifyCard",1,number(//succ:CreditCardID and
+										substring-before(local-name(/SOAP-ENV:Envelope/SOAP-ENV:Body/*),'RQ')='ApplyCard')*
+										10),
+										substring(substring-before(local-name(/SOAP-ENV:Envelope/SOAP-ENV:Body/*),'RQ'),1,number(not(//succ:CreditCardID
+										and
+										substring-before(local-name(/SOAP-ENV:Envelope/SOAP-ENV:Body/*),'RQ')='ApplyCard'))*
+										string-length(substring-before(local-name(/SOAP-ENV:Envelope/SOAP-ENV:Body/*),'RQ'))))
+									</value>
+								</array>
+							</entry>
+							<entry key="TransactionGUID"
+								value="//succ:TrackingInfo/Authentication/PayloadInfo/ConversationID" />
+							<entry key="MessageGUID"
+								value="//succ:TrackingInfo/Authentication/PayloadInfo/RequestID" />
+							<entry key="ClientID"
+								value="//succ:TrackingInfo/Authentication/PayloadInfo/RequestorID" />
+						</map>
+					</property>
+				</bean>
+
+			</list>
+		</property>
+		<property name="responseFieldExtractors">
+			<list>
+				<bean
+					class="com.expedia.e3.es.payment.common.performance.interceptor.metadata.XPathFieldExtractor">
+					<property name="namespaces">
+						<map>
+							<entry key="SOAP-ENV" value="http://www.w3.org/2003/05/soap-envelope" />
+							<entry key="xsi" value="http://www.w3.org/2001/XMLSchema-instance" />
+							<entry key="base" value="urn:expedia:e3:data:basetypes:defn:v2" />
+							<entry key="message" value="urn:expedia:e3:data:messagetypes:defn:v2" />
+							<entry key="finance" value="urn:expedia:e3:data:financetypes:defn:v2" />
+							<entry key="time" value="urn:expedia:e3:data:timetypes:defn:v2" />
+							<entry key="succ"
+								value="urn:expedia:e3:es:succ:service:messages:succtypes:v1" />
+							<entry key="disablecard"
+								value="urn:expedia:e3:es:succ:service:messages:disablecard:v1" />
+							<entry key="applycard"
+								value="urn:expedia:e3:es:succ:service:messages:applycard:v1" />
+							<entry key="getcarddetail"
+								value="urn:expedia:e3:es:succ:service:messages:getcarddetail:v1" />
+							<entry key="getreasoncodes"
+								value="urn:expedia:e3:es:succ:service:messages:getreasoncodes:v1" />
+						</map>
+					</property>
+					<property name="extractRules">
+						<map>
+							<entry key="CardType" value="//finance:CreditCardSupplierCode" />
+							<entry key="Success" value="not(boolean(//message:ErrorList))" />
+							<entry key="ErrorType" value="//message:ErrorCategoryCode" />
+						</map>
+					</property>
+				</bean>
+			</list>
+		</property>
+	</bean>
+
+</beans>

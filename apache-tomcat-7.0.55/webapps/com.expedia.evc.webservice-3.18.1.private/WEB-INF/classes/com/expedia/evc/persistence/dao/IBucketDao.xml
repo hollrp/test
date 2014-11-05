@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.expedia.evc.persistence.dao.IBucketDao">
+
+	<resultMap type="com.expedia.evc.util.ListWrapper" id="bucketList"
+		autoMapping="true">
+		<result column="totalCount" property="totalCount" />
+		<collection property="list" resultMap="bucket"
+			notNullColumn="cardBucketId" />
+	</resultMap>
+
+	<resultMap type="com.expedia.evc.persistence.domain.CardBucketDetailsDO"
+		id="bucket" autoMapping="true" />
+
+	<select id="getBuckets" parameterType="com.expedia.evc.model.BucketSearchCriteria"
+		resultMap="bucketList">
+		;WITH Page AS
+		(
+		SELECT
+		m.CardBucketID as 'cardBucketId',
+		bd.CurrencyCode
+		as 'currencyCode',
+		bd.MaxCreditLimitAmt as 'creditLimitAmount',
+		bd.CardTypeName as 'cardType',
+		bd.CardIssuerName as 'cardIssuerName',
+		m.DeclaredCapacity as 'declaredCapacity',
+		m.NumberOfAvailableCards as
+		'availableCards',
+		m.NumberOfPendingAddCardRequests as 'pendingCards',
+		m.LastUpdatedBy as 'lastUpdatedBy',
+		m.LastUpdatedDate as
+		'lastUpdatedDate',
+		ROW_NUMBER() OVER(ORDER BY
+		<choose>
+			<when test="sortBy == 'cardIssuerName'">bd.CardIssuerName</when>
+			<when test="sortBy == 'cardTypeName'">bd.CardTypeName</when>
+			<when test="sortBy == 'currencyCode'">bd.CurrencyCode</when>
+			<when test="sortBy == 'creditLimit'"> bd.MaxCreditLimitAmt</when>
+			<when test="sortBy == 'declaredCapacity'">m.DeclaredCapacity</when>
+			<when test="sortBy == 'availableCards'">m.NumberOfAvailableCards</when>
+			<when test="sortBy == 'pendingCards'">m.NumberOfPendingAddCardRequests</when>
+			<when test="sortBy == 'lastModifiedBy'">m.LastUpdatedBy</when>
+			<when test="sortBy == 'lastModifiedDate'">m.LastUpdatedDate</when>
+			<otherwise>m.CardBucketID</otherwise>
+		</choose>
+		<choose>
+			<when test="sortAscending == true">ASC</when>
+			<otherwise>DESC</otherwise>
+		</choose>
+		) AS RowID
+		FROM
+		(
+		SELECT
+		CardBucketID,
+		Capacity as 'DeclaredCapacity',
+		(SELECT COUNT(*) FROM dbo.AvailableCreditCard AS a WITH (NOLOCK) WHERE
+		a.CardBucketID = b.CardBucketID) AS NumberOfAvailableCards,
+		(SELECT
+		COUNT(*) FROM dbo.CreditCardModificationRequest AS r WITH (NOLOCK)
+		WHERE r.CardBucketID = b.CardBucketID AND
+		r.CreditCardModificationRequestTypeID=1) AS
+		NumberOfPendingAddCardRequests,
+		LastUpdatedBy,
+		LastUpdatedDate
+		FROM
+		dbo.CardBucket AS b WITH (NOLOCK)
+		WHERE
+		MaxCreditLimitAmt &lt; 100000000
+		) AS m
+		JOIN dbo.CardBucketDetailed as bd
+		on bd.CardBucketID =
+		m.CardBucketID
+		<where>
+			<if test="currencyCodes != null and currencyCodes.size() > 0">
+				bd.CurrencyCode IN
+				<foreach item="currencyCode" collection="currencyCodes"
+					open="(" separator="," close=")">#{currencyCode}</foreach>
+			</if>
+			<if test="cardTypeNames != null and cardTypeNames.size() > 0">
+				AND bd.CardTypeName IN
+				<foreach item="cardTypeName" collection="cardTypeNames"
+					open="(" separator="," close=")">#{cardTypeName}</foreach>
+			</if>
+			<if test="cardIssuerNames != null and cardIssuerNames.size() > 0">
+				AND bd.CardIssuerName IN
+				<foreach item="cardIssuerName" collection="cardIssuerNames"
+					open="(" separator="," close=")">#{cardIssuerName}</foreach>
+			</if>
+		</where>
+		)
+		SELECT * ,(select MAX(RowID) from Page) as totalCount
+		FROM Page
+		where
+		page.RowID BETWEEN #{offset}+1 AND #{offset}+#{length}
+		union
+		select
+		null,null,null,null,null,null,null,null,null,null,null,
+		COALESCE((select MAX(RowID) from Page), 0)
+		where (
+		select COUNT(*) from
+		Page
+		where page.RowID BETWEEN #{offset}+1 AND #{offset}+#{length}) = 0
+		ORDER BY
+		page.RowID
+	</select>
+
+	<select id="getBucket" resultType="CardBucketDetailsDO"
+		parameterType="int">
+		SELECT
+		m.CardBucketID as 'cardBucketId',
+		bd.CurrencyCode
+		as 'currencyCode',
+		bd.MaxCreditLimitAmt as 'creditLimitAmount',
+		bd.CardTypeName as 'cardType',
+		bd.CardIssuerName as 'cardIssuerName',
+		m.DeclaredCapacity as 'declaredCapacity',
+		m.NumberOfAvailableCards as
+		'availableCards',
+		m.NumberOfPendingAddCardRequests as 'pendingCards',
+		m.LastUpdatedBy as 'lastUpdatedBy',
+		m.LastUpdatedDate as
+		'lastUpdatedDate'
+		FROM
+		(
+		SELECT
+		CardBucketID,
+		Capacity as
+		'DeclaredCapacity',
+		(SELECT COUNT(*) FROM dbo.AvailableCreditCard AS a
+		WITH (NOLOCK) WHERE
+		a.CardBucketID = b.CardBucketID) AS
+		NumberOfAvailableCards,
+		(SELECT COUNT(*) FROM
+		dbo.CreditCardModificationRequest AS r WITH (NOLOCK)
+		WHERE
+		r.CardBucketID = b.CardBucketID AND
+		r.CreditCardModificationRequestTypeID=1) AS
+		NumberOfPendingAddCardRequests,
+		LastUpdatedBy,
+		LastUpdatedDate
+		FROM
+		dbo.CardBucket AS b WITH (NOLOCK)
+		) AS m
+		JOIN dbo.CardBucketDetailed as
+		bd
+		on
+		bd.CardBucketID = m.CardBucketID
+		WHERE m.CardBucketID = #{bucketId}
+	</select>
+
+	<update id="updateBucket" parameterType="CardBucketDetailsDO">
+		UPDATE dbo.CardBucket
+		<set>
+			Capacity = #{declaredCapacity},
+			LastUpdatedBy=CONVERT(VARCHAR(32), #{lastUpdatedBy}),
+			LastUpdatedDate=CURRENT_TIMESTAMP
+		</set>
+		WHERE CardBucketID = #{cardBucketId}
+	</update>
+
+	<select id="balanceBucket" statementType="CALLABLE" resultType="map">
+		{
+		CALL dbo.CardBucketBalance_(NULL, NULL, #{cardBucketId, mode=IN,
+		jdbcType=INTEGER})
+		}
+	</select>
+
+
+	<select id="getBucketAndBucketTypeInfo" resultType="CardBucketDetailsDO">
+		SELECT
+		cbt.CardBucketTypeID as 'cardBucketTypeId'
+		,ct.CardTypeName as
+		'cardType'
+		,c.CurrencyCode as 'currencyCode'
+		,ci.CardIssuerName as
+		'cardIssuerName'
+		,null as 'creditLimitAmount'
+		,mcb.CCModClientID
+		as ccModClientId
+		FROM CardBucketType cbt with(nolock)
+		JOIN Currency c
+		on c.CurrencyID=cbt.CurrencyID
+		JOIN MCCGroup mc with(nolock) on
+		mc.MCCGroupID=cbt.MCCGroupID
+		JOIN CardIssuer ci with(nolock) on
+		ci.CardIssuerID=mc.CardIssuerID
+		JOIN CardType ct with(nolock) on
+		ct.CardTypeID=cbt.CardTypeID
+		LEFT JOIN CCModClientCardBucketType mcb
+		with(nolock) on
+		mcb.CardBucketTypeID=cbt.CardBucketTypeID
+		WHERE
+		c.CurrencyCode=#{currencyCode} and ci.CardIssuerName=#{cardIssuer}
+		and
+		ct.CardTypeName=#{cardType}
+		union SELECT
+		cbt.CardBucketTypeID
+		,ct.CardTypeName
+		,c.CurrencyCode
+		,ci.CardIssuerName
+		,cb.MaxCreditLimitAmt
+		,null
+		FROM CardBucketType cbt
+		with(nolock)
+		JOIN Currency c with(nolock) on
+		c.CurrencyID=cbt.CurrencyID
+		JOIN MCCGroup mc with(nolock) on
+		mc.MCCGroupID=cbt.MCCGroupID
+		JOIN CardIssuer ci with(nolock) on
+		ci.CardIssuerID=mc.CardIssuerID
+		JOIN CardType ct with(nolock) on
+		ct.CardTypeID=cbt.CardTypeID
+		LEFT JOIN CardBucket cb with(nolock) on
+		cb.CardBucketTypeID=cbt.CardBucketTypeID
+		LEFT JOIN
+		CCModClientCardBucketType mcb with(nolock) on
+		mcb.CardBucketTypeID=cbt.CardBucketTypeID
+		WHERE
+		c.CurrencyCode=#{currencyCode} and ci.CardIssuerName=#{cardIssuer}
+		and
+		ct.CardTypeName=#{cardType}
+		AND cb.MaxCreditLimitAmt=#{creditLimit}
+		</select>
+
+	<select id="addBucketType" parameterType="CardBucketDetailsDO" resultType="java.lang.Integer">
+		INSERT into
+		CardBucketType(CardTypeID,CurrencyID,MCCGroupID,CreditCardInfoConfigurationValueSetID,CreatedBy,CreatedDate,LastUpdatedBy,LastUpdatedDate)
+		VALUES((select CardTypeID from CardType with(nolock) where
+		CardTypeName=#{cardType})
+		,(select CurrencyID from Currency with(nolock)
+		where CurrencyCode=#{currencyCode})
+		,(select MCCGroupID from MCCGroup
+		m with(nolock) join CardIssuer i with(nolock) on m.CardIssuerID =
+		i.CardIssuerID and i.CardIssuerName=#{cardIssuer})
+		,1,CONVERT(VARCHAR(32), #{lastUpdatedBy}),CURRENT_TIMESTAMP,CONVERT(VARCHAR(32), #{lastUpdatedBy}),CURRENT_TIMESTAMP)
+		SELECT @@IDENTITY
+	</select>
+	<insert id="addCCModClientBucketType">
+		INSERT INTO
+		CCModClientCardBucketType(CCModClientID,CardBucketTypeID,ActiveBool,Priority,CreatedBy,CreatedDate,LastUpdatedBy,LastUpdatedDate)
+		select
+		CCModClientID,#{cardBucketTypeId},1,#{cardBucketTypeId},CONVERT(VARCHAR(32), #{lastUpdatedBy}),CURRENT_TIMESTAMP,CONVERT(VARCHAR(32), #{lastUpdatedBy}),CURRENT_TIMESTAMP
+		from CCModClient with(nolock) 
+		<if test="ccModClientIdList.size()>0">where CCModClientID not in 
+		<foreach item="ccModClientId" collection="ccModClientIdList" open="(" separator="," close=")">#{ccModClientId}</foreach>    
+		</if>
+	</insert>
+	<select id="addBucket" parameterType="CardBucketDetailsDO" resultType="java.lang.Integer">
+	INSERT into CardBucket
+		(CardBucketTypeID,MaxCreditLimitAmt,Capacity,CreatedBy, CreatedDate,
+		LastUpdatedBy, LastUpdatedDate )
+		VALUES(#{cardBucketTypeId},#{creditLimitAmount},#{declaredCapacity},CONVERT(VARCHAR(32), #{lastUpdatedBy}),CURRENT_TIMESTAMP,
+		CONVERT(VARCHAR(32), #{lastUpdatedBy}), CURRENT_TIMESTAMP )
+		SELECT @@IDENTITY
+		</select>
+		<select id="getCardBucketDetailsList" resultType="CardBucketDetailsDO">
+	SELECT cb.CardBucketID 		as 'cardBucketId'
+		,ct.CardTypeName  		as 'cardType'
+		,curr.CurrencyCode 		as 'currencyCode'
+		,ci.CardIssuerName 		as 'cardIssuerName'
+		,ccmc.CCModClientID 	as 'ccModClientId'
+		,ccmc.CCModClientToken 	as 'ccModClientToken'
+		,cp.CardPayeeID 		as 'cardPayeeId'
+		,cb.MaxCreditLimitAmt 	as 'creditLimitAmount'
+	FROM dbo.CardBucket cb   
+	INNER JOIN dbo.CardBucketType cbt  		WITH (NOLOCK) on cbt.CardBucketTypeID=cb.CardBucketTypeID
+	INNER JOIN dbo.CardType ct   			WITH (NOLOCK) on ct.CardTypeID=cbt.CardTypeID
+	INNER JOIN dbo.Currency curr  			WITH (NOLOCK) on curr.CurrencyID = cbt.CurrencyID
+	INNER JOIN dbo.MCCGroup mcc   			WITH (NOLOCK) on mcc.MCCGroupID = cbt.MCCGroupID
+	INNER JOIN dbo.CardIssuer ci  			WITH (NOLOCK) on ci.CardIssuerID = mcc.CardIssuerID
+	INNER JOIN dbo.CCModClientCardBucketType ccbt  	WITH (NOLOCK) on ccbt.CardBucketTypeID = cbt.CardBucketTypeID
+	INNER JOIN dbo.CCModClient ccmc  				WITH (NOLOCK) on ccmc.CCModClientID = ccbt.CCModClientID
+	INNER JOIN dbo.MCCGroupCardPayee mccp  	WITH (NOLOCK) on mccp.MCCGroupID = mcc.MCCGroupID
+	INNER JOIN dbo.CardPayee cp  			WITH (NOLOCK) on cp.CardPayeeID = mccp.CardPayeeID
+	WHERE ccmc.ActiveBool=1 and ccbt.ActiveBool=1
+	</select>
+		
+</mapper>

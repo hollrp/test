@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2012 Expedia, Inc. All rights reserved. EXPEDIA PROPRIETARY/CONFIDENTIAL. 
+	Use is subject to license terms. Succ Web Service client definition beans. -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+								http://www.springframework.org/schema/beans/spring-beans.xsd
+								http://www.springframework.org/schema/util
+								http://www.springframework.org/schema/util/spring-util-3.1.xsd"
+	default-lazy-init="false">
+
+	<bean id="fxrs.RateService" class="com.expedia.evc.external.fx.impl.FxRateService" />
+
+	<bean id="fxrs.Client" class="com.expedia.evc.external.fx.impl.FxRateServiceClient" />
+
+	<bean id="fxrs.SoapMessageFactory" class="org.springframework.ws.soap.saaj.SaajSoapMessageFactory">
+		<property name="soapVersion">
+			<util:constant static-field="org.springframework.ws.soap.SoapVersion.SOAP_12" />
+		</property>
+	</bean>
+	<bean id="fxrs.Marshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
+		<property name="contextPaths">
+			<list value-type="java.lang.String">
+				<value>com.expedia.xmlapi.fxrs.v1</value>
+			</list>
+		</property>
+	</bean>
+	<bean id="fxrs.webServiceTemplate" class="org.springframework.ws.client.core.WebServiceTemplate">
+		<constructor-arg ref="fxrs.SoapMessageFactory" />
+		<property name="defaultUri"
+			value="${com.expedia.evc.webservice.fxrs.http/endpointURL}" />
+		<property name="messageSender">
+			<bean
+				class="org.springframework.ws.transport.http.HttpComponentsMessageSender">
+				<property name="connectionTimeout"
+					value="${com.expedia.evc.webservice.fxrs.http/connectionTimeout}" />
+				<property name="readTimeout"
+					value="${com.expedia.evc.webservice.fxrs.http/socketTimeout}" />
+				<property name="httpClient" ref="fxrs.httpclient" />
+			</bean>
+		</property>
+		<property name="marshaller" ref="fxrs.Marshaller" />
+		<property name="unmarshaller" ref="fxrs.Marshaller" />
+	</bean>
+	<bean id="fxrs.httpclient" class="org.apache.http.impl.client.DefaultHttpClient">
+		<constructor-arg>
+			<bean class="org.apache.http.impl.conn.PoolingClientConnectionManager" />
+		</constructor-arg>
+	</bean>
+	<bean id="removeSoapHeadersInterceptor"
+		class="com.expedia.evc.logging.perflog.RemoveSoapHeadersInterceptor" />
+
+	<bean
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="fxrs.httpclient" />
+		<property name="targetMethod" value="addRequestInterceptor" />
+		<property name="arguments">
+			<list>
+				<ref bean="removeSoapHeadersInterceptor" />
+				<value type="int">0</value>
+			</list>
+		</property>
+	</bean>
+	<bean
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="fxrs.httpclient" />
+		<property name="targetMethod" value="addRequestInterceptor" />
+		<property name="arguments">
+			<list>
+				<ref bean="http.payloadExtractingInterceptor" />
+			</list>
+		</property>
+	</bean>
+	<bean
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="fxrs.httpclient" />
+		<property name="targetMethod" value="addResponseInterceptor" />
+		<property name="arguments">
+			<list>
+				<ref bean="http.payloadExtractingInterceptor" />
+			</list>
+		</property>
+	</bean>
+	
+	
+	
+	<bean id="evcGatewayClient"
+		class="com.expedia.evc.external.evcgateway.impl.EvcGatewayClient" />
+
+
+
+	<bean id="evcGatewaySchemeRegistry"
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject">
+			<bean
+				class="com.expedia.evc.external.evcgateway.impl.EvcGatewaySchemeRegistryFactory" />
+		</property>
+		<property name="targetMethod" value="create" />
+	</bean>
+	
+	
+	<bean id="evcgGatewayHtpClient" class="org.apache.http.impl.client.DefaultHttpClient">
+		<constructor-arg>
+			<bean class="org.apache.http.impl.conn.PoolingClientConnectionManager">
+				<constructor-arg ref="evcGatewaySchemeRegistry" />
+				<property name="maxTotal"
+					value="${com.expedia.evc.gateway.httpclient.maxTotal}" />
+				<property name="defaultMaxPerRoute"
+					value="${com.expedia.evc.gateway.httpclient.defaultMaxPerRoute}" />
+			</bean>
+		</constructor-arg>
+	</bean>
+	<!-- REST Template for EVC gateway-->
+	<bean id="evcGatewayRestTemplate" class="org.springframework.web.client.RestTemplate">
+		<constructor-arg>
+			<bean
+				class="org.springframework.http.client.HttpComponentsClientHttpRequestFactory">
+				<constructor-arg ref="evcgGatewayHtpClient" />
+				<property name="readTimeout"
+					value="${com.expedia.evc.gateway.httpclient.socketTimeout}" />
+				<property name="connectTimeout"
+					value="${com.expedia.evc.gateway.httpclient.connectionTimeout}" />
+			</bean>
+		</constructor-arg>
+		<property name="interceptors">
+			<list>
+				<bean
+					class="com.expedia.evc.external.evcgateway.impl.EvcGatewayRequestInterceptor" />
+			</list>
+		</property>
+	</bean>
+	<bean
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="evcgGatewayHtpClient" />
+		<property name="targetMethod" value="addRequestInterceptor" />
+		<property name="arguments">
+			<list>
+				<ref bean="http.payloadExtractingInterceptor" />
+			</list>
+		</property>
+	</bean>
+
+	<bean
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="evcgGatewayHtpClient" />
+		<property name="targetMethod" value="addResponseInterceptor" />
+		<property name="arguments">
+			<list>
+				<ref bean="http.payloadExtractingInterceptor" />
+			</list>
+		</property>
+	</bean>
+	<!-- Register JSON Converter for RESTful Web Service -->
+	<bean
+		class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+		<property name="messageConverters">
+			<list>
+				<ref bean="jsonConverter" />
+			</list>
+		</property>
+	</bean>
+
+	<!-- Http Json MessageConverter -->
+	<bean id="jsonConverter"
+		class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter"/>
+	
+
+</beans>

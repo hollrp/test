@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.expedia.evc.persistence.dao.ICurrencyDao">
+
+  <select id="getCurrencies" resultType="CurrencyDO">
+	SELECT CurrencyID as 'currencyId', CurrencyCode as 'currencyCode' FROM dbo.Currency with(nolock)
+  </select>
+  
+  <select id="getCurrencyByCode" parameterType="int" resultType="CurrencyDO">
+	SELECT CurrencyID as 'CurrencyId', CurrencyCode FROM dbo.Currency with(nolock) WHERE CurrencyCode = #{code}
+  </select>
+
+</mapper>

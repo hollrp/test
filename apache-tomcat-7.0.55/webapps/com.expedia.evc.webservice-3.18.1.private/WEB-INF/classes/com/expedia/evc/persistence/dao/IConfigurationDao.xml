@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.expedia.evc.persistence.dao.IConfigurationDao">
+	<select id="getMerchantConfigurations" resultType="ConfigurationDO">
+		SELECT conf.MerchantID as 'merchantId',
+		conf.MerchantTypeID as 'merchantTypeId',
+		conf.CardIssuerID as 'cardIssuerId',
+		ci.CardIssuerName as 'cardIssuerName',
+		conf.CardTypeID as 'cardTypeId',
+		ct.CardTypeName as 'cardTypeName',
+		cur.CurrencyCode as 'currencyCode',
+		conf.UnderTolerance as 'underTolerance',
+		conf.OverTolerance as 'overTolerance'
+		FROM dbo.MerchantConfiguration conf WITH (NOLOCK)
+		LEFT JOIN dbo.Currency cur WITH (NOLOCK) ON conf.CardCurrencyID = cur.CurrencyID
+		LEFT JOIN dbo.CardIssuer ci WITH (NOLOCK) ON ci.CardIssuerID = conf.CardIssuerID
+		LEFT JOIN dbo.CardType ct WITH (NOLOCK) ON ct.CardTypeID = conf.CardTypeID
+		WHERE conf.Active=1
+	</select>
+	
+	<select id="getMerchantTypeConfigurations" resultType="ConfigurationDO">
+		SELECT conf.MerchantTypeID as 'merchantTypeId',
+		conf.CardIssuerID as 'cardIssuerId',
+		ci.CardIssuerName as 'cardIssuerName',
+		conf.CardTypeID as 'cardTypeId',
+		ct.CardTypeName as 'cardTypeName',
+		cur.CurrencyCode as 'currencyCode',
+		conf.UnderTolerance as 'underTolerance',
+		conf.OverTolerance as 'overTolerance'
+		FROM dbo.MerchantTypeConfiguration conf WITH (NOLOCK)
+		LEFT JOIN dbo.Currency cur WITH (NOLOCK) ON conf.CardCurrencyID = cur.CurrencyID
+		LEFT JOIN dbo.CardIssuer ci WITH (NOLOCK) ON ci.CardIssuerID = conf.CardIssuerID
+		LEFT JOIN dbo.CardType ct WITH (NOLOCK) ON ct.CardTypeID = conf.CardTypeID
+	</select>
+	
+	<select id="getCountryConfigurations" resultType="ConfigurationDO">
+		SELECT conf.CountryCode as 'countryCode',
+		conf.CardIssuerID as 'cardIssuerId',
+		ci.CardIssuerName as 'cardIssuerName',
+		conf.CardTypeID as 'cardTypeId',
+		ct.CardTypeName as 'cardTypeName',
+		cur.CurrencyCode as 'currencyCode',
+		conf.UnderTolerance as 'underTolerance',
+		conf.OverTolerance as 'overTolerance'
+		FROM dbo.CountryConfiguration conf WITH (NOLOCK)
+		LEFT JOIN dbo.Currency cur WITH (NOLOCK) ON conf.CardCurrencyID = cur.CurrencyID
+		LEFT JOIN dbo.CardIssuer ci WITH (NOLOCK) ON ci.CardIssuerID = conf.CardIssuerID
+		LEFT JOIN dbo.CardType ct WITH (NOLOCK) ON ct.CardTypeID = conf.CardTypeID
+	</select>
+	
+	<select id="getUserMerchantTypes" resultType="NameValueDO">
+		SELECT UserName as 'name', MerchantTypeID as 'value'
+		FROM dbo.SecurityUser WITH (NOLOCK)
+		WHERE EnabledBool=1
+	</select>
+	
+	<select id="getMerchantTypes" resultType="Integer">
+		SELECT MerchantTypeID 
+		FROM dbo.MerchantType WITH (NOLOCK)
+	</select>
+	
+	<select id="getCountryCodes" resultType="String">
+		SELECT CountryCode 
+		FROM dbo.Country WITH (NOLOCK)
+	</select>
+	<select id="getMccGroupInfo" resultType="MccGroupDO">
+		SELECT mcg.MCCGroupCode as 'mccGroupCode'
+      ,cp.MCCCode as 'mccCode'
+      ,ci.CardIssuerName   as 'cardIssuerName'  
+  FROM dbo.MCCGroupCardPayee mcgp with(nolock)
+  join dbo.MCCGroup mcg with(nolock) on mcg.MCCGroupID=mcgp.MCCGroupID
+  join dbo.CardPayee cp with(nolock) on cp.CardPayeeID=mcgp.CardPayeeID
+  join dbo.CardIssuer ci with(nolock) on ci.CardIssuerID=mcg.CardIssuerID
+	</select>
+</mapper>

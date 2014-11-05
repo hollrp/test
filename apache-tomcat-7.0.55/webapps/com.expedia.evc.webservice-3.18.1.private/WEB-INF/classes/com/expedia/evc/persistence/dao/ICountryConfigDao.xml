@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.expedia.evc.persistence.dao.ICountryConfigDao">
+	<select id="getCountryConfig" resultType="CountryConfigDO"
+		parameterType="string">
+		SELECT cc.CountryCode,
+		cu.CurrencyCode,
+		ct.CardTypeName,
+		ci.CardIssuerName,
+		cc.OverTolerance,
+		cc.UnderTolerance,
+		cc.LastUpdatedBy
+		AS lastModifiedBy,
+		cc.LastUpdatedDate AS lastModifiedDate,
+		cc.Active
+		FROM CountryConfiguration cc with(NOLOCK)
+		LEFT JOIN CardType ct
+		with(NOLOCK) on ct.CardTypeID = cc.CardTypeID
+		LEFT JOIN CardIssuer ci
+		with(NOLOCK) on ci.CardIssuerID = cc.CardIssuerID
+		LEFT JOIN Currency cu
+		with(NOLOCK) on cu.CurrencyID= cc.CardCurrencyID
+		WHERE cc.CountryCode=
+		#{countryCode}
+	</select>
+
+
+	<select id="isCountryConfigurationExist" resultType="boolean"
+		parameterType="String">
+		IF EXISTS(
+		SELECT top 1 CountryCode FROM
+		dbo.CountryConfiguration WITH(NOLOCK) WHERE
+		CountryCode =
+		#{countryCode}
+		) select 'true' else select 'false';
+	</select>
+
+	<insert id="addCountryConfiguration" parameterType="CountryConfigDO">
+		<selectKey resultType="java.lang.Integer" keyProperty="countryConfigurationId"
+			order="AFTER">
+			SELECT @@IDENTITY;
+		</selectKey>
+		INSERT INTO dbo.CountryConfiguration(
+		CountryCode,
+		CardCurrencyID,
+		CardTypeID,
+		CardIssuerID,
+		OverTolerance,
+		UnderTolerance,
+		Active,
+		CreatedBy,
+		LastUpdatedBy,
+		CreatedDate,
+		LastUpdatedDate
+		)
+		VALUES(
+		#{countryCode},
+		(SELECT CurrencyID as CardCurrencyID
+		FROM dbo.Currency
+		with(nolock) where Currency.CurrencyCode =
+		#{currencyCode}),
+		(SELECT
+		CardTypeId
+		FROM dbo.CardType with(nolock) where CardType.CardTypeName =
+		#{cardTypeName}),
+		(SELECT CardIssuerId
+		FROM dbo.CardIssuer with(nolock)
+		where CardIssuer.CardIssuerName =
+		#{cardIssuerName}),
+		#{overTolerance},
+		#{underTolerance},
+		<choose>
+			<when test="active!= null">#{active},</when>
+			<otherwise>1,</otherwise>
+		</choose>
+		#{createdBy},
+		#{createdBy},
+		CURRENT_TIMESTAMP,
+		CURRENT_TIMESTAMP
+		)
+	</insert>
+
+	<update id="updateCountryConfiguration" parameterType="CountryConfigDO">
+		UPDATE dbo.CountryConfiguration
+		<set>
+			<if test="currencyCode != null">CardCurrencyID = (SELECT CurrencyID as CardCurrencyID
+				FROM dbo.Currency where Currency.CurrencyCode = #{currencyCode}),
+			</if>
+			<if test="cardTypeName != null">CardTypeId = (SELECT CardTypeId
+				FROM dbo.CardType where
+				CardType.CardTypeName = #{cardTypeName}),
+			</if>
+			<if test="cardIssuerName != null">CardIssuerId = (SELECT CardIssuerId
+				FROM dbo.CardIssuer
+				where CardIssuer.CardIssuerName =
+				#{cardIssuerName}),
+			</if>
+			<if test="overTolerance != null">OverTolerance=#{overTolerance},</if>
+			<if test="underTolerance != null">UnderTolerance=#{underTolerance},</if>
+			<if test="active!= null">Active=#{active},</if>
+			LastUpdatedBy= #{createdBy},
+			LastUpdatedDate=CURRENT_TIMESTAMP
+		</set>
+		WHERE CountryCode = #{countryCode};
+	</update>
+
+	<insert id="archiveCountryConfiguration" parameterType="MerchantConfigDO">
+		INSERT
+		INTO dbo.CountryConfigurationArchive(
+		CountryConfigurationID,
+		CountryCode,
+		CardCurrencyID,
+		CardTypeID,
+		CardIssuerID,
+		OverTolerance,
+		UnderTolerance,
+		Active,
+		CreatedBy,
+		CreatedDate
+		)
+		SELECT
+		CountryConfigurationID,
+		CountryCode,
+		CardCurrencyID,
+		CardTypeID,
+		CardIssuerID,
+		OverTolerance,
+		UnderTolerance,
+		Active,
+		#{createdBy},
+		CURRENT_TIMESTAMP
+		FROM dbo.CountryConfiguration
+		WHERE CountryCode =
+		#{countryCode};
+	</insert>
+	<select id="getCountryConfigs" resultMap="countryConfigList"
+		parameterType="com.expedia.evc.model.CountryConfigSearchCriteria">
+		;WITH Page AS
+		(
+		SELECT cc.CountryCode AS countryCode, 
+		ct.CardTypeName,
+		ci.CardIssuerName,
+		cu.CurrencyCode,
+		cc.OverTolerance, 
+		cc.UnderTolerance,
+		cc.LastUpdatedBy AS lastModifiedBy,
+		cc.LastUpdatedDate AS
+		lastModifiedDate, 
+		cc.Active as active,
+		ROW_NUMBER() OVER(ORDER BY
+		<choose>
+			<when test="sortBy == 'countryCode'">cc.CountryCode</when>
+			<when test="sortBy == 'cardIssuerName'">CardIssuerName</when>
+			<when test="sortBy == 'cardTypeName'">CardTypeName</when>
+			<when test="sortBy == 'currencyCode'">CurrencyCode</when>
+			<when test="sortBy == 'lastModifiedBy'">cc.LastUpdatedBy</when>
+			<when test="sortBy == 'lastModifiedDate'">cc.LastUpdatedDate</when>
+			<when test="sortBy == 'overTolerancePercentage'">cc.OverTolerance</when>
+			<when test="sortBy == 'underTolerancePercentage'">cc.UnderTolerance</when>
+			<when test="sortBy == 'active'">cc.Active</when>
+			<otherwise>cc.CountryCode</otherwise>
+		</choose>
+		<choose>
+			<when test="sortAscending == true">ASC</when>
+			<otherwise>DESC</otherwise>
+		</choose>
+		) AS RowID
+		FROM CountryConfiguration cc WITH(NOLOCK)
+		LEFT OUTER JOIN
+		dbo.Currency cu WITH(NOLOCK) on cu.CurrencyID=
+		cc.CardCurrencyID
+		LEFT
+		OUTER JOIN dbo.CardIssuer ci WITH(NOLOCK) on ci.CardIssuerID =
+		cc.CardIssuerID
+		LEFT OUTER JOIN dbo.CardType ct WITH(NOLOCK) on
+		ct.CardTypeID =
+		cc.CardTypeID
+		 <where>
+		<if test="currencyCodes != null and currencyCodes.size() > 0">
+			CurrencyCode IN
+			<foreach item="currencyCode" collection="currencyCodes" open="("
+				separator="," close=")">#{currencyCode}</foreach>
+		</if>
+
+		<if test="cardTypeNames != null and cardTypeNames.size() > 0">
+
+			 AND CardTypeName IN
+			<foreach item="cardTypeName" collection="cardTypeNames" open="("
+				separator="," close=")">#{cardTypeName}</foreach>
+		</if>
+
+		<if test="cardIssuerNames != null and cardIssuerNames.size() > 0">
+			
+			 AND CardIssuerName IN
+			<foreach item="cardIssuerName" collection="cardIssuerNames"
+				open="(" separator="," close=")">#{cardIssuerName}</foreach>
+		</if>
+
+		<if test="countryCodes != null and countryCodes.size() > 0">
+			
+			 AND cc.CountryCode IN
+			<foreach item="countryCode" collection="countryCodes" open="("
+				separator="," close=")">#{countryCode}</foreach>
+		</if>
+
+		<if test="active!= null">
+			
+			 AND cc.Active=#{active}
+		</if>
+		</where>
+		)
+		SELECT * ,(select MAX(RowID) from Page) as totalCount
+		FROM Page
+		where
+		page.RowID BETWEEN #{offset}+1 AND #{offset}+#{length}
+		union all
+    	select null,null,null,null,null,null,null,null,null,null, COALESCE((select MAX(RowID) from Page), 0) 
+    	where (
+    		select COUNT(*) from Page
+    		where page.RowID BETWEEN #{offset}+1 AND #{offset}+#{length}) = 0 ORDER BY page.RowID
+	</select>
+	
+	<resultMap type="com.expedia.evc.util.ListWrapper" id="countryConfigList" autoMapping="true">
+		<result column="totalCount" property="totalCount"/>
+		<collection property="list" resultMap="countryConfig" notNullColumn="countryCode"/>
+	</resultMap>
+	
+	<resultMap type="com.expedia.evc.persistence.domain.CountryConfigDO" id="countryConfig" autoMapping="true"/>
+	
+</mapper>

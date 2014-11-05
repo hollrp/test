@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+                           http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+                           http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.1.xsd">
+
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="succRepositoryDataSource" />
+    </bean>
+
+    <!-- enable transaction demarcation with annotations -->
+    <tx:annotation-driven transaction-manager="transactionManager" order="10"/>
+	<task:annotation-driven/>
+    <!-- Enable autowire -->
+    <context:annotation-config/>
+
+    <!-- Define the SqlSessionFactory -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="succRepositoryDataSource" />
+        <property name="typeAliasesPackage" value="com.expedia.evc.persistence.domain" />
+        <property name="configLocation" value="classpath:mybatis-config.xml" />
+    </bean>
+    
+    <!-- Define the SqlSessionFactory -->
+    <bean id="sqlSessionFactoryAddModificationRequest" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="succRepositoryDataSourceAddModificationRequest" />
+        <property name="typeAliasesPackage" value="com.expedia.evc.persistence.domain" />
+        <property name="configLocation" value="classpath:mybatis-config.xml" />
+    </bean>
+    
+     <!-- Define the SqlSessionFactory -->
+    <bean id="sqlSessionFactoryFxJob" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="succRepositoryDataSourceFxJob" />
+        <property name="typeAliasesPackage" value="com.expedia.evc.persistence.domain" />
+        <property name="configLocation" value="classpath:mybatis-config.xml" />
+    </bean>
+
+	<bean id="sqlSessionFactoryCardSearch" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="succRepositoryDataSourceCardSearch" />
+        <property name="typeAliasesPackage" value="com.expedia.evc.persistence.domain" />
+        <property name="configLocation" value="classpath:mybatis-config.xml" />
+    </bean>
+    
+    <bean id="sqlSessionFactoryBucketBalance" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="succRepositoryDataSourceCardBucketBalance" />
+        <property name="typeAliasesPackage" value="com.expedia.evc.persistence.domain" />
+        <property name="configLocation" value="classpath:mybatis-config.xml" />
+    </bean>
+    
+	<task:executor id="asyncMethodExecutor"  
+		pool-size="${com.expedia.evc.AsyncMethodExecutor/poolSize:15}"
+		queue-capacity="${com.expedia.evc.AsyncMethodExecutor/queueCapacity:100}"
+		rejection-policy="CALLER_RUNS" />
+
+    <!-- ===================== MyBatis Mappers ===================== -->
+
+    <bean id="baseMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" abstract="true">
+        <description> Basic mapper containing SqlSessionFactory.</description>
+        <property name="sqlSessionFactory" ref="sqlSessionFactory" />
+    </bean>
+
+    <bean id="settingsMapper" class="org.mybatis.spring.mapper.MapperFactoryBean"  parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.ISettingsDao" />
+    </bean>
+
+    <bean id="cardMapper" class="org.mybatis.spring.mapper.MapperFactoryBean"  parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.ICardDao" />
+    </bean>
+    
+    <bean id="cardMapperFxJob" class="org.mybatis.spring.mapper.MapperFactoryBean"  parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.ICardDao" />
+        <property name="sqlSessionFactory" ref="sqlSessionFactoryFxJob" />
+    </bean>
+    <bean id="cardMapperSearch" class="org.mybatis.spring.mapper.MapperFactoryBean"  parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.ICardDao" />
+        <property name="sqlSessionFactory" ref="sqlSessionFactoryCardSearch" />
+    </bean>
+    
+    <bean id="bucketBalanceMapper" class="org.mybatis.spring.mapper.MapperFactoryBean"  parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.IBucketDao" />
+        <property name="sqlSessionFactory" ref="sqlSessionFactoryBucketBalance" />
+    </bean>
+
+    <bean id="modificationRequestMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.IModificationRequestDao" />
+    </bean>
+    <bean id="modificationRequestReserveMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.IModificationRequestReserveDao" />
+    </bean>
+
+    <bean id="currencyMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.ICurrencyDao" />
+    </bean>
+
+    <bean id="configurationMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.IConfigurationDao" />
+    </bean>
+
+    <bean id="cardTypesMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.ICardTypesDao" />
+    </bean>
+    
+    <bean id="merchantTypeMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.IMerchantTypeDao" />
+    </bean>
+
+    <bean id="merchantConfigMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.IMerchantConfigDao" />
+    </bean>
+    
+     <bean id="countryConfigMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.ICountryConfigDao" />
+    </bean>
+    
+    <bean id="bucketMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.IBucketDao" />
+    </bean>
+    
+    <bean id="currencyConfigMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.ICurrencyConfigDao" />
+    </bean>
+    
+     <bean id="addModificationRequestMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" parent="baseMapper">
+        <property name="mapperInterface" value="com.expedia.evc.persistence.dao.IModificationRequestDao" />
+        <property name="sqlSessionFactory" ref="sqlSessionFactoryAddModificationRequest" />
+    </bean>
+    
+   
+
+</beans>

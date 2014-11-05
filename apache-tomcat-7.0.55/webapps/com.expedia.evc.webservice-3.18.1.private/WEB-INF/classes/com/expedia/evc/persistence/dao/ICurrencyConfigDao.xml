@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.expedia.evc.persistence.dao.ICurrencyConfigDao">
+
+	<resultMap type="com.expedia.evc.util.ListWrapper" id="currencyConfigList"
+		autoMapping="true">
+		<result column="totalCount" property="totalCount" />
+		<collection property="list" resultMap="currencyConfig"
+			notNullColumn="currencyConfigurationId" />
+	</resultMap>
+
+	<resultMap type="com.expedia.evc.persistence.domain.CurrencyConfigDO"
+		id="currencyConfig" autoMapping="true" />
+
+
+	<update id="updateCurrencyConfig">
+		UPDATE dbo.CurrencyConfiguration
+		<set>
+			<if test="cardIssuerAttribute!=null">
+				CardIssuerAttribute = #{cardIssuerAttribute},
+			</if>
+			<if test="active!=null">
+				Active = #{active},
+			</if>
+			LastUpdatedBy=CONVERT(VARCHAR(32), #{lastModifiedBy}),
+			LastUpdatedDate=CURRENT_TIMESTAMP
+		</set>
+		WHERE CurrencyConfigurationID = #{currencyConfigurationId}
+	</update>
+
+
+	<select id="getCurrencyConfigurations" resultMap="currencyConfig">
+		SELECT cc.CurrencyConfigurationID, ct.CardTypeName, c.CurrencyCode, ci.CardIssuerName, cc.CardIssuerAttribute, cc.Active
+		FROM dbo.CurrencyConfiguration cc with(nolock)
+		JOIN dbo.Currency c on c.CurrencyID=cc.CurrencyID
+		JOIN CardIssuer ci with(nolock) on ci.CardIssuerID=cc.CardIssuerID
+		JOIN CardType ct with(nolock) on ct.CardTypeID=cc.CardTypeID
+		WHERE cc.Active=1
+	</select>
+
+	<select id="getCurrencyConfigList" parameterType="com.expedia.evc.model.CurrencyConfigSearchCriteria"
+		resultMap="currencyConfigList">
+		;WITH Page AS
+		(
+		SELECT
+		cc.CurrencyConfigurationID as
+		'currencyConfigurationId',
+		c.CurrencyCode as 'currencyCode',
+		ct.CardTypeName as 'cardTypeName',
+		ci.CardIssuerName as
+		'cardIssuerName',
+		cc.Active as 'active',
+		cc.CardIssuerAttribute as
+		'cardIssuerAttribute',
+		cc.LastUpdatedDate as 'lastModifiedDate',
+		cc.LastUpdatedBy as 'lastModifiedBy',
+		ROW_NUMBER() OVER(ORDER BY
+		<choose>
+			<when test="sortBy == 'cardIssuerName'">CardIssuerName</when>
+			<when test="sortBy == 'cardTypeName'">CardTypeName</when>
+			<when test="sortBy == 'currencyCode'">CurrencyCode</when>
+			<when test="sortBy == 'lastModifiedBy'">cc.LastUpdatedBy</when>
+			<when test="sortBy == 'lastModifiedDate'">cc.LastUpdatedDate</when>
+			<when test="sortBy == 'active'">cc.Active</when>
+			<otherwise>CurrencyConfigurationID</otherwise>
+		</choose>
+		<choose>
+			<when test="sortAscending == true">ASC</when>
+			<otherwise>DESC</otherwise>
+		</choose>
+		) AS RowID
+		FROM
+		dbo.CurrencyConfiguration as cc
+		INNER JOIN CardType ct ON
+		ct.CardTypeID=cc.CardTypeID
+		INNER JOIN CardIssuer ci ON
+		ci.CardIssuerID=cc.CardIssuerID
+		INNER JOIN Currency c ON
+		c.CurrencyID=cc.CurrencyID
+		<if test="active!=null">WHERE cc.Active=#{active}</if>
+		)
+		SELECT * ,(select MAX(RowID) from Page) as totalCount
+		FROM Page
+		where
+		page.RowID BETWEEN #{offset}+1 AND #{offset}+#{length}
+		union
+		select
+		null,null,null,null,null,null,null,null,null, COALESCE((select
+		MAX(RowID)
+		from Page), 0)
+		where (
+		select COUNT(*) from Page
+		where
+		page.RowID BETWEEN #{offset}+1 AND #{offset}+#{length}) = 0 ORDER BY
+		page.RowID
+	</select>
+
+	<select id="getCurrencyConfig"  resultMap="currencyConfig">
+		SELECT
+		cc.CurrencyConfigurationID as 'currencyConfigurationId'
+		,ct.CardTypeName as
+		'cardTypeName'
+		,c.CurrencyCode as 'currencyCode'
+		,ci.CardIssuerName as
+		'cardIssuerName'
+		, cc.Active as 'active'
+		FROM
+		CurrencyConfiguration cc with(nolock)
+		JOIN Currency c on
+		c.CurrencyID=cc.CurrencyID
+		JOIN CardIssuer ci with(nolock) on
+		ci.CardIssuerID=cc.CardIssuerID
+		JOIN CardType ct with(nolock) on
+		ct.CardTypeID=cc.CardTypeID
+		WHERE
+		c.CurrencyCode=#{currencyCode} and
+		ci.CardIssuerName=#{cardIssuer}
+		and
+		ct.CardTypeName=#{cardType}
+
+	</select>
+	<select id="getCurrencyConfigById" parameterType="java.lang.Integer" resultMap="currencyConfig">
+		SELECT
+		 cc.CurrencyConfigurationID as 'currencyConfigurationId'
+		,ci.CardIssuerName as 'cardIssuerName'
+		FROM CurrencyConfiguration cc
+		with(nolock) 
+		JOIN CardIssuer ci with(nolock) on
+		ci.CardIssuerID=cc.CardIssuerID
+		WHERE
+		cc.CurrencyConfigurationID=#{currencyConfigurationId} 
+	</select>
+
+	<select id="addCurrencyConfig" resultType="java.lang.Integer">
+		INSERT into
+		CurrencyConfiguration(CardTypeID,CurrencyID,CardIssuerID,CardIssuerAttribute,CreatedBy,CreatedDate,LastUpdatedBy,LastUpdatedDate,Active)
+		VALUES((select CardTypeID from CardType with(nolock) where
+		CardTypeName=#{cardTypeName})
+		,(select CurrencyID from Currency
+		with(nolock)
+		where CurrencyCode=#{currencyCode})
+		,(select CardIssuerID
+		from CardIssuer i with(nolock) where CardIssuerName=#{cardIssuerName})
+		,#{cardIssuerAttribute},CONVERT(VARCHAR(32),#{lastModifiedBy}),
+		CURRENT_TIMESTAMP,CONVERT(VARCHAR(32),
+		#{lastModifiedBy}),CURRENT_TIMESTAMP,
+		<choose>
+			<when test="active!=null">#{active}</when>
+			<otherwise>1</otherwise>
+		</choose>
+		)
+		SELECT @@IDENTITY
+	</select>
+
+
+
+</mapper>

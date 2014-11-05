@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.expedia.evc.persistence.dao.IMerchantConfigDao">
+
+    <!--query to get merchant config-->
+
+  <select id="getMerchantConfig" resultType="MerchantConfigDO" parameterType="map">
+select ct.CardTypeName as cardTypeName,
+        ci.CardIssuerName as cardIssuerName,
+        cu.CurrencyCode as currencyCode,
+        mc.MerchantID AS merchantRefId ,
+        mc.OverTolerance AS overTolerance,
+        mc.UnderTolerance AS underTolerance,
+        mc.LastUpdatedBy AS lastModifiedBy,
+        mc.LastUpdatedDate AS lastModifiedDate,
+        mc.Active AS active
+  from MerchantConfiguration mc with(nolock)
+        left join CardType ct with(nolock) on ct.CardTypeID = mc.CardTypeID
+        left join CardIssuer ci with(nolock) on ci.CardIssuerID = mc.CardIssuerID
+        left join Currency cu with(nolock) on cu.CurrencyID= mc.CardCurrencyID
+  WHERE mc.MerchantTypeID = #{merchantTypeId}
+  	AND mc.MerchantConfigurationID = ISNULL(#{merchantConfigurationId},mc.MerchantConfigurationID)
+  	AND mc.MerchantID=ISNULL(#{merchantRefId},mc.MerchantID);
+
+  </select>
+    
+    <resultMap type="com.expedia.evc.util.ListWrapper" id="merchantConfigList" autoMapping="true">
+		<result column="totalCount" property="totalCount"/>
+		<collection property="list" resultMap="merchantConfig" notNullColumn="id"/>
+	</resultMap>
+	
+	<resultMap type="com.expedia.evc.persistence.domain.MerchantConfigDO" id="merchantConfig" autoMapping="true"/>
+    
+  <select id="getMerchantConfigs" resultMap="merchantConfigList" parameterType="com.expedia.evc.model.MerchantConfigSearchCriteria">
+  ;WITH Page AS
+ (
+  SELECT mc.MerchantConfigurationID AS id,
+  ct.CardTypeName,
+  ci.CardIssuerName,
+  cu.CurrencyCode,
+  mc.MerchantID AS merchantRefId ,
+  mc.OverTolerance AS overTolerance, 
+  mc.UnderTolerance AS underTolerance,
+  mc.LastUpdatedBy AS lastModifiedBy, 
+  mc.LastUpdatedDate AS lastModifiedDate, 
+  mc.Active AS ACTIVE,
+  ROW_NUMBER()  OVER(ORDER BY
+  <choose>
+    <when test="sortBy == 'cardIssuerName'">CardIssuerName</when>
+    <when test="sortBy == 'cardTypeName'">CardTypeName</when>
+    <when test="sortBy == 'currencyCode'">CurrencyCode</when>
+    <when test="sortBy == 'lastModifiedBy'">mc.LastUpdatedBy</when>
+    <when test="sortBy == 'lastModifiedDate'">mc.LastUpdatedDate</when>
+    <when test="sortBy == 'overTolerancePercentage'">mc.OverTolerance</when>
+    <when test="sortBy == 'underTolerancePercentage'">mc.UnderTolerance</when>
+    <when test="sortBy == 'active'">mc.Active</when>
+    <otherwise>MerchantId</otherwise>
+  </choose>
+  <choose>
+    <when test="sortAscending == true">ASC</when>
+     <otherwise>DESC</otherwise>
+  </choose>
+     ) AS RowID 
+  FROM MerchantConfiguration mc WITH(NOLOCK)
+  LEFT OUTER JOIN dbo.Currency cu WITH(NOLOCK) on cu.CurrencyID= mc.CardCurrencyID
+  LEFT OUTER JOIN dbo.CardIssuer ci WITH(NOLOCK) on ci.CardIssuerID = mc.CardIssuerID
+  LEFT OUTER JOIN dbo.CardType ct WITH(NOLOCK) on ct.CardTypeID = mc.CardTypeID
+  WHERE mc.MerchantTypeID = #{merchantTypeId}
+   <if test="currencyCodes != null and currencyCodes.size() > 0"> AND ISNULL(CurrencyCode, '') IN
+     <foreach item="currencyCode" collection="currencyCodes" open="(" separator="," close=")">
+     	<choose>
+     		<when test="currencyCode.isEmpty()">''</when>
+     		<otherwise>#{currencyCode}</otherwise>
+     	</choose>
+     </foreach>
+   </if>
+   <if test="cardTypeNames != null and cardTypeNames.size() > 0"> AND ISNULL(CardTypeName, '') IN
+     <foreach item="cardTypeName" collection="cardTypeNames" open="(" separator="," close=")">
+     	<choose>
+     		<when test="cardTypeName.isEmpty()">''</when>
+     		<otherwise>#{cardTypeName}</otherwise>
+     	</choose>
+     </foreach>
+   </if>
+   <if test="cardIssuerNames != null and cardIssuerNames.size() > 0"> AND ISNULL(CardIssuerName, '') IN
+     <foreach item="cardIssuerName" collection="cardIssuerNames" open="(" separator="," close=")">
+     	<choose>
+     		<when test="cardIssuerName.isEmpty()">''</when>
+     		<otherwise>#{cardIssuerName}</otherwise>
+     	</choose>
+     </foreach>
+   </if>
+    <if test="merchantRefIds != null and merchantRefIds.size() > 0"> AND MerchantId IN
+     <foreach item="merchantRefId" collection="merchantRefIds" open="(" separator="," close=")">#{merchantRefId}</foreach>    
+   </if>
+   <if test="lastModifiedBy != null and lastModifiedBy.size() > 0"> AND 
+     <foreach item="modifier" collection="lastModifiedBy" open="(" separator="OR" close=")">mc.LastUpdatedBy LIKE '%'+ #{modifier} +'%'</foreach>    
+   </if>
+   <if test="lastModifiedDatesRanges != null and lastModifiedDatesRanges.size() > 0"> AND
+     <foreach item="lastModifiedDatesRange" collection="lastModifiedDatesRanges" open="(" separator=" OR " close=")">(1=1
+     	<if test="lastModifiedDatesRange != null and lastModifiedDatesRange.lowerBound != null"> AND convert(date,mc.LastUpdatedDate) >= #{lastModifiedDatesRange.lowerBound}</if>
+   		<if test="lastModifiedDatesRange != null and lastModifiedDatesRange.upperBound != null"> AND convert(date,mc.LastUpdatedDate) &lt;= #{lastModifiedDatesRange.upperBound}</if>
+   		)
+     </foreach>
+   </if>
+   <if test="lastModifiedDates != null and lastModifiedDates.size() > 0"> AND convert(date,mc.LastUpdatedDate) IN
+     <foreach item="lastModifiedDate" collection="lastModifiedDates" open="(" separator="," close=")">#{lastModifiedDate}</foreach>    
+   </if>
+   <if test="lastModifiedDatesRanges != null and lastModifiedDatesRanges.size() > 0"> AND
+     <foreach item="lastModifiedDatesRange" collection="lastModifiedDatesRanges" open="(" separator=" OR " close=")">(1=1
+     	<if test="lastModifiedDatesRange != null and lastModifiedDatesRange.lowerBound != null"> AND convert(date,mc.LastUpdatedDate) >= #{lastModifiedDatesRange.lowerBound}</if>
+   		<if test="lastModifiedDatesRange != null and lastModifiedDatesRange.upperBound != null"> AND convert(date,mc.LastUpdatedDate) &lt;= #{lastModifiedDatesRange.upperBound}</if>
+   		)
+     </foreach>
+   </if>
+   
+   <if test="overTolerancePercentages != null and overTolerancePercentages.size() > 0"> AND mc.OverTolerance IN
+     <foreach item="overTolerancePercentage" collection="overTolerancePercentages" open="(" separator="," close=")">#{overTolerancePercentage}/100.</foreach>    
+   </if>
+   <if test="overTolerancePercentagesRanges != null and overTolerancePercentagesRanges.size() > 0"> AND
+     <foreach item="overTolerancePercentagesRange" collection="overTolerancePercentagesRanges" open="(" separator=" OR " close=")">(1=1
+     	<if test="overTolerancePercentagesRange != null and overTolerancePercentagesRange.lowerBound != null"> AND mc.OverTolerance >= #{overTolerancePercentagesRange.lowerBound}/100.</if>
+   		<if test="overTolerancePercentagesRange != null and overTolerancePercentagesRange.upperBound != null"> AND mc.OverTolerance &lt;= #{overTolerancePercentagesRange.upperBound}/100.</if>
+   		)
+     </foreach>
+   </if>
+   
+   <if test="underTolerancePercentages != null and underTolerancePercentages.size() > 0"> AND mc.UnderTolerance IN
+     <foreach item="underTolerancePercentage" collection="underTolerancePercentages" open="(" separator="," close=")">#{underTolerancePercentage}/100.</foreach>    
+   </if>
+   <if test="underTolerancePercentagesRanges != null and underTolerancePercentagesRanges.size() > 0"> AND
+     <foreach item="underTolerancePercentagesRange" collection="underTolerancePercentagesRanges" open="(" separator=" OR " close=")">(1=1
+     	<if test="underTolerancePercentagesRange != null and underTolerancePercentagesRange.lowerBound != null"> AND mc.UnderTolerance >= #{underTolerancePercentagesRange.lowerBound}/100.</if>
+   		<if test="underTolerancePercentagesRange != null and underTolerancePercentagesRange.upperBound != null"> AND mc.UnderTolerance &lt;= #{underTolerancePercentagesRange.upperBound}/100.</if>
+   		)
+     </foreach>
+   </if>
+   <if test="active != null"> AND Active=#{active} </if>
+   )
+	SELECT * ,(select MAX(RowID) from Page) as totalCount 
+ 	FROM Page
+ 	where page.RowID BETWEEN #{offset}+1 AND #{offset}+#{length}
+ 	union all
+    select null,null,null,null,null,null,null,null,null,null,null, COALESCE((select MAX(RowID) from Page), 0) 
+    where (
+    	select COUNT(*) from Page
+    	where page.RowID BETWEEN #{offset}+1 AND #{offset}+#{length}) = 0 ORDER BY page.RowID
+  </select>
+  
+  <select id="validateMerchantTypeId" resultType="string" parameterType="int">
+  SELECT top 1 mt.MerchantTypeID AS id
+  FROM MerchantType mt WITH(NOLOCK)
+  WHERE mt.MerchantTypeID = #{merchantTypeId};
+  </select>
+
+  <select id="validateMerchantConfigurationId" resultType="string" parameterType="int">
+  SELECT top 1 mc.MerchantConfigurationID AS id
+  FROM MerchantConfiguration mc WITH(NOLOCK)
+  WHERE mc.MerchantConfigurationID = #{MerchantConfigID};
+  </select>
+
+  <select id="isMerchantRefAndTypeIdExist" resultType="boolean" parameterType="map">
+  IF EXISTS(
+	  SELECT top 1 mc.MerchantID as merchantRefId
+	  FROM dbo.MerchantConfiguration mc WITH(NOLOCK)
+	  WHERE mc.MerchantID = #{merchantRefId}
+	   AND mc.MerchantTypeID = #{merchantTypeId}
+  ) select 'true' else select 'false';
+  </select>
+
+  <select id="validateCardConfiguration" resultType="string" parameterType="map">
+  SELECT top 1 ci.CardIssuerName
+  FROM dbo.CardIssuer ci with(NOLOCK)
+  INNER JOIN dbo.MCCGroup mg with(NOLOCK)
+    ON ci.CardIssuerID = mg.CardIssuerID
+  INNER JOIN dbo.CardBucketType cbt with(NOLOCK)
+    ON mg.MCCGroupID = cbt.MCCGroupID
+  INNER JOIN dbo.CardType ct with(NOLOCK)
+    ON ct.CardTypeID = cbt.CardTypeID
+  INNER JOIN dbo.Currency c with(NOLOCK)
+    ON cbt.CurrencyID = c.CurrencyID
+  WHERE ci.ActiveBool != 0 AND ci.CardIssuerName like ISNULL(NULLIF(#{cardIssuerName}, ''), '%')
+   AND ct.CardTypeName like ISNULL (NULLIF(#{cardTypeName}, ''), '%')
+   AND c.CurrencyCode like ISNULL(NULLIF(#{currencyCode}, ''), '%');
+  </select>
+
+  <insert id="addMerchantConfiguration" parameterType="MerchantConfigDO" >
+      <selectKey resultType="java.lang.Integer" keyProperty="merchantConfigurationId"
+                 order="AFTER">
+          SELECT @@IDENTITY;
+      </selectKey>
+      INSERT INTO dbo.MerchantConfiguration(
+      MerchantID,
+      MerchantTypeID,
+      CardCurrencyID,
+      CardTypeID,
+      CardIssuerID,
+      OverTolerance,
+      UnderTolerance,
+      CreatedBy,
+      LastUpdatedBy,
+      CreatedDate,
+      LastUpdatedDate,
+      Active
+      )
+      VALUES(
+      #{merchantRefId},
+      #{merchantTypeId},
+      (SELECT CurrencyID as CardCurrencyID
+      FROM dbo.Currency with(nolock) where Currency.CurrencyCode = #{currencyCode}),
+      (SELECT CardTypeId
+      FROM dbo.CardType with(nolock) where CardType.CardTypeName = #{cardTypeName}),
+      (SELECT CardIssuerId
+      FROM dbo.CardIssuer with(nolock) where CardIssuer.CardIssuerName = #{cardIssuerName}),
+      #{overTolerance},
+      #{underTolerance},
+      #{createdBy},
+      #{createdBy},
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP,
+      <choose>
+      <when test="active!= null">#{active}</when>
+      <otherwise>1</otherwise>
+ 	  </choose>
+      )
+  </insert>
+  
+  <update id="updateMerchantConfiguration" parameterType="MerchantConfigDO" >
+      UPDATE dbo.MerchantConfiguration
+     <set>
+      <if test="currencyCode != null">CardCurrencyID = (SELECT CurrencyID as CardCurrencyID
+      FROM dbo.Currency where Currency.CurrencyCode = #{currencyCode}),</if>
+      <if test="cardTypeName != null">CardTypeId = (SELECT CardTypeId
+      FROM dbo.CardType where CardType.CardTypeName = #{cardTypeName}),</if>
+       <if test="cardTypeName != null">CardIssuerId = (SELECT CardIssuerId
+      FROM dbo.CardIssuer where CardIssuer.CardIssuerName = #{cardIssuerName}),</if>
+      <if test="overTolerance != null">overTolerance=#{overTolerance},</if>
+      <if test="underTolerance != null">underTolerance=#{underTolerance},</if>
+      <if test="active != null">Active=#{active},</if>
+      LastUpdatedBy= #{createdBy},
+      LastUpdatedDate=CURRENT_TIMESTAMP
+    </set>
+     WHERE MerchantID = #{merchantRefId} AND MerchantTypeID=#{merchantTypeId};
+  </update>
+  
+  <insert id="archiveMerchantConfiguration" parameterType="MerchantConfigDO">
+     INSERT INTO dbo.MerchantConfigurationArchive(
+      MerchantConfigurationID,
+      MerchantID,
+      MerchantTypeID,
+      CardCurrencyID,
+      CardTypeID,
+      CardIssuerID,
+      OverTolerance,
+      UnderTolerance,
+      CreatedBy,
+      CreatedDate,
+      Active
+      )
+      SELECT 
+      MerchantConfigurationID,
+      MerchantID,
+      MerchantTypeID,
+      CardCurrencyID,
+      CardTypeID,
+      CardIssuerID,
+      OverTolerance,
+      UnderTolerance,
+      #{createdBy},
+      CURRENT_TIMESTAMP,
+      Active
+      FROM dbo.MerchantConfiguration
+      WHERE MerchantID = #{merchantRefId};
+  </insert>
+</mapper>
+

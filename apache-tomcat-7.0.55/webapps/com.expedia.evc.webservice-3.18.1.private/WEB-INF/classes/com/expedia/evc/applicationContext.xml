@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+	Copyright 2012 Expedia, Inc. All rights reserved. EXPEDIA PROPRIETARY/CONFIDENTIAL. 
+	Use is subject to license terms.
+
+	Main Spring Configuration file. Contains imports for all application layers.
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+						http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+	<context:component-scan base-package="com.expedia.evc" />
+
+	<!-- Import farm properties configuration. -->
+	<import resource="farms-definition-beans.xml" />
+
+    <import resource="webservice-definition-beans.xml" />
+
+	<import resource="endpoint-definition-beans.xml" />
+	
+	<import resource="rs/restservice-definition-beans.xml" />
+	
+	<import resource="v1/endpoint-definition-beans.xml" />
+	
+	<import resource="v1/webservice-definition-beans.xml" />
+	
+	<import resource="v1/converter-definition-beans.xml" />
+
+	<import resource="external-definition-beans.xml" />
+	
+	<import resource="perflogging-definition-beans.xml" />
+	
+	<import resource="security-definition-beans.xml" />
+	
+	<import resource="datasource-definition-beans.xml" />
+	
+	<import resource="persistence-definition-beans.xml" />
+
+	<import resource="converter-definition-beans.xml" />
+
+	<import resource="system-status-definition-beans.xml" />
+
+	<import resource="level2cache-definition-beans.xml"/>	
+	
+	<import resource="fx-adjustment-definition-beans.xml"/>
+	
+	<import resource="move-reserve-definition-beans.xml"/>
+	
+	<import resource="jmx-beans.xml"/>
+	
+	<import resource="rabbitmq-definition-beans.xml"/>
+	
+</beans>
+
+

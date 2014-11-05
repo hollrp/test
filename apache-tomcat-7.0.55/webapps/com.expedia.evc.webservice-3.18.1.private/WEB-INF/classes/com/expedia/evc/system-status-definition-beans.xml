@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Copyright 2012 Expedia, Inc. All rights reserved. EXPEDIA PROPRIETARY/CONFIDENTIAL. 
+	Use is subject to license terms.
+
+	System Status configuration.
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	                    http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+
+	<!--  Global System status configuration --> 
+
+	<bean id="manifestBean" class="com.expedia.evc.service.status.ManifestBean">
+		<constructor-arg value="META-INF/MANIFEST.MF" />
+	</bean>
+
+	<bean id="com.expedia.evc.system.status.componentStatusCache"
+		class="com.expedia.e3.es.payment.common.status.cache.ComponentStatusCache" />
+
+	<bean id="systemStatusFacade"
+		class="com.expedia.e3.es.payment.common.status.SystemStatusFacade">
+		<property name="componentStatusCache" ref="com.expedia.evc.system.status.componentStatusCache" />
+		<property name="serviceStatusResolver" ref="com.expedia.evc.system.status.StatusResolver" />
+		<property name="name" value="${com.expedia.evc.webservice/productName:EvcWebService}" />
+		<property name="version">
+			<bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+				<property name="targetObject" ref="manifestBean" />
+				<property name="targetMethod" value="getMainAttributeValue" />
+				<property name="arguments">
+					<list>
+						<value>version</value>
+						<value>Unknown</value>
+						</list>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+	<bean id="com.expedia.evc.system.status.StatusResolver" class="com.expedia.evc.service.status.StatusResolver"/>
+	
+	<bean id="com.expedia.evc.system.status.checkers.DataSourceChecker"
+		class="com.expedia.e3.es.payment.common.status.checkers.db.DataSourceChecker">
+		<constructor-arg index="0"	value="${com.expedia.evc.database/jdbcDriver}" />
+		<property name="componentName" value="SUCC DB" />
+		<property name="url" value="${com.expedia.evc.database/url};${com.expedia.evc.database/timeout};user=${com.expedia.evc.database/user};password=${com.expedia.evc.database/password}" />
+		<property name="checkSql"
+			value="SELECT HAS_PERMS_BY_NAME(db_name(), 'DATABASE', 'SELECT')" />
+		<property name="expectedValue" value="1" />
+		<property name="critical" value="true" />
+		<property name="displayUrl" value="${com.expedia.evc.database/url};${com.expedia.evc.database/timeout}"/>
+	</bean>
+	
+	<!-- FXRS -->
+	<bean id="com.expedia.evc.system.status.checkers.FxRSChecker"
+	    class="com.expedia.evc.service.status.FxRSStatusChecker">
+	    <property name="fxrs" ref="fxrs.RateService"/>
+	    <property name="checkerType" value="FXRS Http Checker"/>    
+	    <property name="url" value="${com.expedia.evc.webservice.fxrs.http/endpointURL}" />
+	    <property name="componentName" value="FXRS" />
+	    <property name="errorPerfLogger" ref="com.expedia.evc.webservice.performance.error.ErrorLogger"/>
+	    <property name="cache" ref="evcLevel2Cache" />
+	</bean>
+	
+	<!-- RabbitMQ -->
+	<bean id="com.expedia.evc.system.status.checkers.RabbitMqChecker"
+ 		 class="com.expedia.evc.external.rabbitmq.impl.RabbitMqChecker">
+  		<constructor-arg index="0"
+   			value="${com.expedia.evc.webservice.rabbitmq.system-status/hosts}" />
+   		<constructor-arg index="1"
+   			value="${com.expedia.evc.webservice.rabbitmq/username}" />
+  		<constructor-arg index="2"
+  			value="${com.expedia.evc.webservice.rabbitmq/password}" />
+  		<property name="componentName" value="RabbitMQ" />
+ 		<property name="connectionTimeout" value="${com.expedia.evc.webservice.rabbitMq/connectionTimeout}"/>
+  		<property name="socketTimeout" value="${com.expedia.evc.webservice.rabbitMq/socketTimeout}"/>
+ 	</bean>
+ 
+	<!-- EVC Gateway --> 
+	<bean id="com.expedia.evc.system.status.checkers.EvcGatewayChecker"
+	    class="com.expedia.evc.service.status.EvcGatewayServiceChecker">
+	    <property name="url" value="${com.expedia.evc.gateway.service.url}" />
+	    <property name="componentName" value="EvcGateway" />
+	</bean>
+
+	<!-- Quartz configuration -->
+	<bean id="com.expedia.evc.system.status.componentStatusUpdateTask"
+		class="com.expedia.e3.es.payment.common.status.cache.ComponentStatusUpdateTask">
+		<constructor-arg index="0"
+			ref="com.expedia.evc.system.status.componentStatusCache" />
+		<constructor-arg index="1">
+			<list>
+				<ref bean="com.expedia.evc.system.status.checkers.DataSourceChecker" />
+ 				<ref bean="com.expedia.evc.system.status.checkers.FxRSChecker"/>
+ 				<ref bean="com.expedia.evc.system.status.checkers.EvcGatewayChecker"/>
+ 				<!-- <ref bean="com.expedia.evc.system.status.checkers.RabbitMqChecker"/ -->
+			</list>
+		</constructor-arg>
+	</bean>
+
+	<bean id="com.expedia.evc.system.status.componentStatusUpdateTask.JobDetail"
+		class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="targetObject" ref="com.expedia.evc.system.status.componentStatusUpdateTask" />
+		<property name="targetMethod" value="update" />
+		<property name="concurrent" value="false" />
+	</bean>
+
+	<bean id="com.expedia.evc.system.status.componentStatusUpdateTask.CronTriggerFactoryBean"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail"
+			ref="com.expedia.evc.system.status.componentStatusUpdateTask.JobDetail" />
+		<property name="cronExpression" value="${com.expedia.evc.webservice.system.status.job/cronExpression}" />
+	</bean>
+
+	<bean id="systemStatusSchedulerFactoryBean" class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="triggers"
+			ref="com.expedia.evc.system.status.componentStatusUpdateTask.CronTriggerFactoryBean" />
+	</bean>
+	
+	<!-- Expose System status via Jmx -->
+	<bean id="com.expedia.evc.status.systemStatusFacadeJmx" class="com.expedia.e3.es.payment.common.status.api.jmx.SystemStatusFacadeMXBean">
+ 		<constructor-arg name="systemStatusFacade" ref="systemStatusFacade"/>
+	</bean>
+
+	<!-- Expose System status via HTTP servlet -->
+	<bean id="sample.status.systemStatusFacadeServlet" class="com.expedia.e3.es.payment.common.status.api.servlet.SystemStatusFacadeServlet">
+		<property name="systemStatusFacade" ref="systemStatusFacade"/>
+	</bean>
+
+</beans>

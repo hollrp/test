@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+	Copyright 2012 Expedia, Inc. All rights reserved. EXPEDIA PROPRIETARY/CONFIDENTIAL. 
+	Use is subject to license terms.
+
+	Main Spring Configuration file. Contains all converter implementations.
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+
+	<bean id="messageInfoPopulator" class="com.expedia.evc.ws.convert.MessageInfoPopulator"/>
+	<!-- Web Service Converters: EVC Model to XSD type -->
+	<bean id="systemstatus.componentStatusConverter" class="com.expedia.evc.ws.convert.ComponentStatusConverter"/>
+	<bean id="systemstatus.serviceStatusConverter" class="com.expedia.evc.ws.convert.ServiceStatusConverter">
+		 <constructor-arg ref="systemstatus.componentStatusConverter" />
+	</bean>
+
+	<bean id="ws.amountConverter" class="com.expedia.evc.ws.convert.AmountConverter" />
+	<bean id="ws.addressConverter" class="com.expedia.evc.ws.convert.AddressConverter" />
+	<bean id="ws.additionalDataListConverter" class="com.expedia.evc.ws.convert.AdditionalDataConverter" />
+	<bean id="ws.creditCardDetailsConverter" class="com.expedia.evc.ws.convert.CreditCardDetailsConverter" />
+	<bean id="ws.creditCardDetailsToCreditCardTypeConverter" class="com.expedia.evc.ws.convert.CreditCardDetailsToCreditCardTypeConverter"/>
+	<bean id="ws.currencyAmountTypeConverter" class="com.expedia.evc.ws.convert.CurrencyAmountTypeConverter" />
+	<bean id="ws.additionalDataListTypeIssueConverter" class="com.expedia.evc.ws.convert.AdditionalDataListTypeIssueConverter"/>
+	<bean id="ws.additionalDataListTypeModifyConverter" class="com.expedia.evc.ws.convert.AdditionalDataListTypeModifyConverter"/>
+	<bean id="ws.additionalDataListTypeDisableConverter" class="com.expedia.evc.ws.convert.AdditionalDataListTypeDisableConverter"/>
+	<bean id="ws.transactionHistoryTypeConverter" class="com.expedia.evc.ws.convert.TransactionHistoryTypeConverter"/>
+
+	<bean id="ws.modifyCardRQToAdditionalDataConverter"
+		  class="com.expedia.evc.ws.convert.ModifyCardRQToAdditionalDataConverter">
+		<constructor-arg ref="ws.additionalDataListTypeModifyConverter" />
+	</bean>
+	
+	<bean id="ws.issueCardRQToAdditionalDataConverter"
+		  class="com.expedia.evc.ws.convert.IssueCardRQToAdditionalDataConverter">
+		<constructor-arg ref="ws.additionalDataListTypeIssueConverter" />
+	</bean>
+	
+	<bean id="ws.disableCardRQToAdditionalDataConverter"
+		  class="com.expedia.evc.ws.convert.DisableCardRQToAdditionalDataConverter">
+		<constructor-arg ref="ws.additionalDataListTypeDisableConverter" />
+	</bean>
+
+	<bean id="ws.cardParameterTypeConverter"
+		  class="com.expedia.evc.ws.convert.CardParameterTypeConverter">
+		<constructor-arg ref="ws.currencyAmountTypeConverter" />
+	</bean>
+	
+	<bean id="ws.messageInfoTypeConverter" class="com.expedia.evc.ws.convert.MessageInfoTypeConverter"/>
+	
+
+	<bean id="ws.modifyCardRQToCardParametersConverter"
+		  class="com.expedia.evc.ws.convert.ModifyCardRQToCardParametersConverter">
+		<constructor-arg ref="ws.cardParameterTypeConverter" />
+		<constructor-arg ref="ws.modifyCardRQToAdditionalDataConverter" />
+	</bean>
+	
+	<bean id="ws.issueCardRQToCardParametersConverter"
+		  class="com.expedia.evc.ws.convert.IssueCardRQToCardParametersConverter">
+		<constructor-arg ref="ws.cardParameterTypeConverter" />
+		<constructor-arg ref="ws.issueCardRQToAdditionalDataConverter" />
+	</bean>
+	
+	<!-- Service Converters: Domain model to EVC Model -->
+	<bean id="service.cardDetailsRequestAttributesDOConverter"
+	      class="com.expedia.evc.service.convert.CreditCardRequestAttributesDOConverter" /> 
+	<bean id="service.configurationSettingsToAddressConverter" class="com.expedia.evc.service.convert.ConfigurationSettingsToAddressConverter"/>
+	<bean id="service.creditCardDetailsDOConverter" class="com.expedia.evc.service.convert.CreditCardDetailsDOConverter"/>
+	<bean id="service.creditCardInfoDOConverter" class="com.expedia.evc.service.convert.CreditCardInfoDOConverter"/>
+<bean id="service.creditCardRequestAttributesDOConverter" class="com.expedia.evc.service.convert.RequestAttributesDOConverter"/>
+	<!-- Conversion Service -->
+	<bean id="conversionService" class="org.springframework.context.support.ConversionServiceFactoryBean">
+		<property name="converters">
+			<list>
+				<ref bean="systemstatus.componentStatusConverter" />
+				<ref bean="systemstatus.serviceStatusConverter" />
+
+				<ref bean="ws.amountConverter" />
+				<ref bean="ws.addressConverter" />
+				<ref bean="ws.additionalDataListConverter" />
+				<ref bean="ws.creditCardDetailsConverter" />
+				<ref bean="ws.creditCardDetailsToCreditCardTypeConverter" />
+				<ref bean="ws.cardParameterTypeConverter" />
+				<ref bean="ws.messageInfoTypeConverter" />
+				<ref bean="ws.modifyCardRQToCardParametersConverter" />
+				<ref bean="ws.issueCardRQToCardParametersConverter" />
+				<ref bean="ws.disableCardRQToAdditionalDataConverter" />
+				<ref bean="ws.transactionHistoryTypeConverter" />
+				
+				<ref bean="v1.ws.payloadInfoConverter" />
+				<ref bean="v1.ws.disableCardRQTypeConverter" />
+				<ref bean="v1.ws.applyCardRQTypeConverter" />
+				<ref bean="v1.ws.creditCardDetailsConverter" />
+				<ref bean="v1.ws.creditCardDetailsToApplyCardRSConverter" />
+				
+				<ref bean="service.configurationSettingsToAddressConverter" />
+				<ref bean="service.creditCardDetailsDOConverter" />
+				<ref bean="service.creditCardInfoDOConverter" />
+				<ref bean="service.creditCardRequestAttributesDOConverter" />
+			</list>
+		</property>
+	</bean>
+	
+</beans>

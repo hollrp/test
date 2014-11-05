@@ -1,0 +1,46 @@
+Oct 31, 2014 4:40:43 AM org.apache.catalina.core.AprLifecycleListener init
+INFO: Loaded APR based Apache Tomcat Native library 1.1.31 using APR version 1.4.8.
+Oct 31, 2014 4:40:43 AM org.apache.catalina.core.AprLifecycleListener init
+INFO: APR capabilities: IPv6 [true], sendfile [true], accept filters [false], random [true].
+Oct 31, 2014 4:40:44 AM org.apache.catalina.core.AprLifecycleListener initializeSSL
+INFO: OpenSSL successfully initialized (OpenSSL 1.0.1h 5 Jun 2014)
+Oct 31, 2014 4:40:44 AM org.apache.coyote.AbstractProtocol init
+INFO: Initializing ProtocolHandler ["http-apr-8080"]
+Oct 31, 2014 4:40:44 AM org.apache.coyote.AbstractProtocol init
+INFO: Initializing ProtocolHandler ["ajp-apr-8009"]
+Oct 31, 2014 4:40:44 AM org.apache.catalina.startup.Catalina load
+INFO: Initialization processed in 1130 ms
+Oct 31, 2014 4:40:44 AM org.apache.catalina.core.StandardService startInternal
+INFO: Starting service Catalina
+Oct 31, 2014 4:40:44 AM org.apache.catalina.core.StandardEngine startInternal
+INFO: Starting Servlet Engine: Apache Tomcat/7.0.55
+Oct 31, 2014 4:40:44 AM org.apache.catalina.startup.HostConfig deployWAR
+INFO: Deploying web application archive D:\apache-tomcat-7.0.55\webapps\com.expedia.evc.webservice-3.18.1.private.war
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployWAR
+INFO: Deployment of web application archive D:\apache-tomcat-7.0.55\webapps\com.expedia.evc.webservice-3.18.1.private.war has finished in 70,634 ms
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployDirectory
+INFO: Deploying web application directory D:\apache-tomcat-7.0.55\webapps\docs
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployDirectory
+INFO: Deployment of web application directory D:\apache-tomcat-7.0.55\webapps\docs has finished in 45 ms
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployDirectory
+INFO: Deploying web application directory D:\apache-tomcat-7.0.55\webapps\examples
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployDirectory
+INFO: Deployment of web application directory D:\apache-tomcat-7.0.55\webapps\examples has finished in 279 ms
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployDirectory
+INFO: Deploying web application directory D:\apache-tomcat-7.0.55\webapps\host-manager
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployDirectory
+INFO: Deployment of web application directory D:\apache-tomcat-7.0.55\webapps\host-manager has finished in 51 ms
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployDirectory
+INFO: Deploying web application directory D:\apache-tomcat-7.0.55\webapps\manager
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployDirectory
+INFO: Deployment of web application directory D:\apache-tomcat-7.0.55\webapps\manager has finished in 53 ms
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployDirectory
+INFO: Deploying web application directory D:\apache-tomcat-7.0.55\webapps\ROOT
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.HostConfig deployDirectory
+INFO: Deployment of web application directory D:\apache-tomcat-7.0.55\webapps\ROOT has finished in 41 ms
+Oct 31, 2014 4:41:55 AM org.apache.coyote.AbstractProtocol start
+INFO: Starting ProtocolHandler ["http-apr-8080"]
+Oct 31, 2014 4:41:55 AM org.apache.coyote.AbstractProtocol start
+INFO: Starting ProtocolHandler ["ajp-apr-8009"]
+Oct 31, 2014 4:41:55 AM org.apache.catalina.startup.Catalina start
+INFO: Server startup in 70771 ms

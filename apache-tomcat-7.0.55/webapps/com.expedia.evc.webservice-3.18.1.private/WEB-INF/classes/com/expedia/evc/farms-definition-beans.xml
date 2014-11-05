@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Copyright 2012 Expedia, Inc. All rights reserved. EXPEDIA PROPRIETARY/CONFIDENTIAL. 
+	Use is subject to license terms.
+
+	Farms properties configuration.
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+						http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.1.xsd">
+
+	<!-- Resolves application properties for farm. -->
+	<bean id="applicationProperties"
+		  class="org.jasypt.spring.properties.EncryptablePropertyPlaceholderConfigurer">
+		<constructor-arg>
+			<bean class="org.jasypt.encryption.pbe.StandardPBEStringEncryptor">
+				<property name="config">
+					<bean class="org.jasypt.encryption.pbe.config.SimpleStringPBEConfig">
+						<property name="algorithm" value="PBEWithMD5AndDES" />
+						<property name="password" value="evcv3secret" />
+						<property name="providerClassName"
+							value="org.bouncycastle.jce.provider.BouncyCastleProvider" />
+					</bean>
+				</property>
+			</bean>
+		</constructor-arg>
+		<property name="ignoreUnresolvablePlaceholders" value="true" />
+		<property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+		<property name="searchSystemEnvironment" value="true" />
+		<property name="locations">
+			<list>
+				<value>file:${appconfig}/base/*.properties</value>
+				<value>file:${appconfig}/farms/${app.farm}/*.properties</value>
+			</list>
+		</property>
+	</bean>
+
+</beans>

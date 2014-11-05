@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xmlns:beans="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+    					http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.1.xsd
+    					http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.1.xsd">
+
+	<bean id="basicAuthenticationFilter"
+		class="org.springframework.security.web.authentication.www.BasicAuthenticationFilter"
+		p:authenticationManager-ref="org.springframework.security.authenticationManager"
+		p:ignoreFailure="false"
+		p:authenticationEntryPoint-ref="authFailureEntryPoint"/>
+
+	<bean id="filterSecurityInterceptor"
+		class="org.springframework.security.web.access.intercept.FilterSecurityInterceptor">
+		<property name="authenticationManager"
+			ref="org.springframework.security.authenticationManager" />
+		<property name="accessDecisionManager" ref="httpRequestAccessDecisionManager" />
+		<property name="securityMetadataSource">
+			<security:filter-security-metadata-source>
+				<security:intercept-url pattern="/service" access="User,CardManager" method="POST" />
+				<security:intercept-url pattern="/service" access="User,CardManager" method="PUT" />
+	            <security:intercept-url pattern="/configservice/v1/cardtypes/**" access="User,ConfigurationManager" />
+	            <security:intercept-url pattern="/configservice/v1/merchanttypes/**" access="User,ConfigurationManager" />
+	            <security:intercept-url pattern="/configservice/v1/countryconfigurations/**" access="User,ConfigurationManager" />
+	            <security:intercept-url pattern="/admin/v1/cards/**"  access="CardManager" />
+	            <security:intercept-url pattern="/admin/v1/buckets/**"  access="BucketManager" />
+	            <security:intercept-url pattern="/admin/v1/currencies/**"  access="CurrencyManager" />
+	            <security:intercept-url pattern="/wants-traffic/**" method="PUT" access="DeploymentManager"/>
+			</security:filter-security-metadata-source>
+		</property>
+	</bean>
+
+
+	<bean id="httpRequestAccessDecisionManager"
+		class="org.springframework.security.access.vote.AffirmativeBased" p:allowIfAllAbstainDecisions="false">
+		<property name="decisionVoters">
+			<list>
+				<bean class="org.springframework.security.access.vote.RoleVoter" p:rolePrefix="" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="exceptionTranslationFilter"
+		class="org.springframework.security.web.access.ExceptionTranslationFilter"
+		p:authenticationEntryPoint-ref="authFailureEntryPoint"
+		p:accessDeniedHandler-ref="authFailureEntryPoint"/>
+
+
+	<bean id="authFailureEntryPoint"
+		class="com.expedia.evc.security.AuthFailureEntryPoint">
+		<constructor-arg ref="authenticationFailureStrategies" />
+	</bean>
+	
+	<util:list id="authenticationFailureStrategies"
+			   value-type="com.expedia.evc.security.AuthFailureStrategy">
+		<bean class="com.expedia.evc.security.WebBrowserAuthFailureStrategy">
+			<constructor-arg value="/service" />
+			<constructor-arg ref="evcServiceWebBrowserClientFailureConfiguration" />
+			<constructor-arg value="3" />
+			<constructor-arg ref="cardServiceAuthFailurePerflogHandler" />
+		</bean>
+		<bean class="com.expedia.evc.security.DefaultAuthFailureStrategy">
+			<constructor-arg value="/service" />
+			<constructor-arg ref="evcServiceSoapClientFailureConfiguration"/>
+			<constructor-arg ref="cardServiceAuthFailurePerflogHandler" />
+		</bean>
+		<bean class="com.expedia.evc.security.DefaultAuthFailureStrategy">
+			<constructor-arg value="/configservice" />
+			<constructor-arg ref="restServiceFailureConfiguration" />
+			<constructor-arg ref="restServiceAuthFailurePerflogHandler" />
+		</bean>
+		<bean class="com.expedia.evc.security.DefaultAuthFailureStrategy">
+			<constructor-arg value="/admin" />
+			<constructor-arg ref="restServiceFailureConfiguration" />
+			<constructor-arg ref="restServiceAuthFailurePerflogHandler" />
+		</bean>
+	</util:list>
+	
+	<bean id="evcServiceFailureConfiguration"
+				class="com.expedia.evc.security.FailureResponseConfiguration"
+				abstract="true">
+		<property name="authenticationPayload">
+			<util:constant static-field="com.expedia.evc.security.FailureResponses.EVC_SERVICE_UNAUTHENTICATED_SOAP_ENV"/>
+		</property>
+		<property name="authorizationPayload">
+			<util:constant static-field="com.expedia.evc.security.FailureResponses.EVC_SERVICE_UNAUTHORIZED_SOAP_ENV"/>
+		</property>
+	</bean>
+	
+	<bean id="evcServiceSoapClientFailureConfiguration"
+				class="com.expedia.evc.security.FailureResponseConfiguration"
+				parent="evcServiceFailureConfiguration" p:contentType="application/soap+xml"/>
+	
+	<bean id="evcServiceWebBrowserClientFailureConfiguration"
+				class="com.expedia.evc.security.FailureResponseConfiguration"
+				parent="evcServiceFailureConfiguration" p:contentType="text/xml; charset=utf-8"/>
+
+	
+	<bean id="restServiceFailureConfiguration"
+				class="com.expedia.evc.security.FailureResponseConfiguration">
+		<property name="authenticationPayload">
+			<util:constant static-field="com.expedia.evc.security.FailureResponses.EVC_SERVICE_UNAUTHENTICATED_JSON"/>
+		</property>
+		<property name="authorizationPayload">
+			<util:constant static-field="com.expedia.evc.security.FailureResponses.EVC_SERVICE_UNAUTHORIZED_JSON"/>
+		</property>
+		<property name="contentType" value="application/json"/>
+	</bean>
+	
+	<bean id="cardServiceAuthFailurePerflogHandler" class="com.expedia.evc.security.CardServiceAuthFailurePerflogHandler">
+		<constructor-arg ref="com.expedia.evc.webservice.performance.error.ErrorLogger" />
+	</bean>
+	
+	<bean id="restServiceAuthFailurePerflogHandler" class="com.expedia.evc.security.ConfigServiceAuthFailurePerflogHandler">
+		<constructor-arg ref="com.expedia.evc.webservice.performance.error.ErrorLogger" />
+		<constructor-arg ref="messageSource" />
+	</bean>
+	
+	<bean id="filterChainProxy"
+		class="org.springframework.security.web.FilterChainProxy">
+		<constructor-arg>
+			<list>
+				<security:filter-chain pattern="/**"
+					filters="basicAuthenticationFilter, 
+					exceptionTranslationFilter,
+					filterSecurityInterceptor" />
+			</list>
+		</constructor-arg>
+	</bean>
+
+
+	<bean id="security.UserService" class="com.expedia.evc.security.AuthenticationUserDetailsService"/>
+
+	<security:authentication-manager>
+		<security:authentication-provider user-service-ref="security.UserService">
+			<security:password-encoder hash="sha" />
+		</security:authentication-provider>
+	</security:authentication-manager>
+
+</beans>
